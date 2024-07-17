@@ -1,19 +1,6 @@
 package de.geofabrik.railway_routing;
 
-import com.graphhopper.routing.ev.BikeNetwork;
-import com.graphhopper.routing.ev.DecimalEncodedValueImpl;
-import com.graphhopper.routing.ev.FerrySpeed;
-import com.graphhopper.routing.ev.ImportRegistry;
-import com.graphhopper.routing.ev.ImportUnit;
-import com.graphhopper.routing.ev.MaxSpeed;
-import com.graphhopper.routing.ev.OSMWayID;
-import com.graphhopper.routing.ev.RoadClass;
-import com.graphhopper.routing.ev.RoadClassLink;
-import com.graphhopper.routing.ev.RoadEnvironment;
-import com.graphhopper.routing.ev.Roundabout;
-import com.graphhopper.routing.ev.VehicleAccess;
-import com.graphhopper.routing.ev.VehiclePriority;
-import com.graphhopper.routing.ev.VehicleSpeed;
+import com.graphhopper.routing.ev.*;
 import com.graphhopper.routing.util.FerrySpeedCalculator;
 import com.graphhopper.routing.util.PriorityCode;
 import com.graphhopper.routing.util.parsers.BikePriorityParser;
@@ -41,7 +28,7 @@ import de.geofabrik.railway_routing.parsers.OSMVoltageParser;
 import de.geofabrik.railway_routing.parsers.RailAccessParser;
 import de.geofabrik.railway_routing.parsers.RailAverageSpeedParser;
 
-public class RailImportRegistry implements ImportRegistry {
+public class RailImportRegistry extends DefaultImportRegistry {
 
     public RailImportRegistry() {
     }
@@ -127,6 +114,6 @@ public class RailImportRegistry implements ImportRegistry {
                     (lookup, props) -> new RailAverageSpeedParser(lookup, props),
                     "ferry_speed"
             );
-        return null;
+        return super.createImportUnit(name);
     }
 }
