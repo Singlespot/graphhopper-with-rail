@@ -84,7 +84,7 @@ public class MatchResource {
 
     @Inject
     public MatchResource(GraphHopperConfig config, RailwayHopper graphHopper, ProfileResolver profileResolver,
-            TranslationMap trMap) {
+                         TranslationMap trMap) {
         this.config = config;
         this.hopper = graphHopper;
         this.profileResolver = profileResolver;
@@ -102,7 +102,7 @@ public class MatchResource {
                     .parse();
             InputCSVEntry last = null;
             ArrayList<Observation> result = new ArrayList<Observation>(inputEntries.size());
-            for (InputCSVEntry entry: inputEntries) {
+            for (InputCSVEntry entry : inputEntries) {
                 if (last != null) {
                     last = entry;
                 }
@@ -163,9 +163,9 @@ public class MatchResource {
         str.append("longitude").append(separator).append("latitude\n");
         for (int i = 0; i < points.size(); ++i) {
             str.append(Double.toString(points.getLon(i)))
-                .append(separator)
-                .append(Double.toString(points.getLat(i)))
-                .append('\n');
+                    .append(separator)
+                    .append(Double.toString(points.getLat(i)))
+                    .append('\n');
         }
         return str.toString();
     }
@@ -194,7 +194,7 @@ public class MatchResource {
 
     /**
      * Convert URL parameters to PMap.
-     *
+     * <p>
      * Copied from upstream MapMatchingResource.java
      */
     private PMap createHintsMap(MultivaluedMap<String, String> queryParameters) {
@@ -243,7 +243,7 @@ public class MatchResource {
         ViaRouting.Result result = ViaRouting.calcPaths(request.getPoints(), queryGraph, snaps,
                 solver.createDirectedEdgeFilter(), pathCalculator, request.getCurbsides(), forceCurbsides,
                 request.getHeadings(), passThrough);
-        
+
         RoutedPath path = new RoutedPath(result.paths.get(0), queryGraph);
         return path;
     }
@@ -274,8 +274,9 @@ public class MatchResource {
             @QueryParam("traversal_keys") @DefaultValue("false") boolean enableTraversalKeys,
             @QueryParam(Parameters.Routing.MAX_VISITED_NODES) @DefaultValue("3000") int maxVisitedNodes,
             @QueryParam("gps_accuracy") @DefaultValue("40") double gpsAccuracy,
+            @QueryParam("max_processing_time") @DefaultValue("120") int maxProcessingTimeSeconds,
             @QueryParam("fill_gaps") @DefaultValue("false") boolean fillGaps) throws Exception {
-        
+
         StopWatch sw = new StopWatch().start();
         boolean writeGPX = "gpx".equalsIgnoreCase(outType);
         instructions = writeGPX || instructions;
@@ -292,10 +293,15 @@ public class MatchResource {
         profileResolverHints.putObject(Parameters.CH.DISABLE, true);
         profile = profileResolver.resolveProfile(profileResolverHints);
         hints.putObject("profile", profile);
+
+        // add values that are not in hints because they were explicitly listed in query params
+        hints.putObject(MAX_VISITED_NODES, maxVisitedNodes);
         removeLegacyParameters(hints);
 
         MapMatching mapMatching = MapMatching.fromGraphHopper(hopper, hints);
         mapMatching.setMeasurementErrorSigma(gpsAccuracy);
+        mapMatching.setMaxProcessingTimeSeconds(maxProcessingTimeSeconds);
+
         double took = 0;
         try {
             List<Observation> inputGPXEntries = parseInput(inputStream, httpReq.getHeader("Content-type"), csvInputSeparator, quoteChar);
@@ -314,14 +320,14 @@ public class MatchResource {
                     List<GHPoint> points = new ArrayList<GHPoint>();
                     points.add((GHPoint) inputGPXEntries.get(start_point).getPoint());
                     points.add((GHPoint) inputGPXEntries.get(start_point + 1).getPoint());
-                    GHRequest request =  new GHRequest(points);
+                    GHRequest request = new GHRequest(points);
                     initHints(request.getHints(), uriInfo.getQueryParameters());
                     request.setProfile(profile).
-                        setLocale(localeStr).
-                        setPathDetails(pathDetails).
-                        getHints().
-                        putObject(CALC_POINTS, calcPoints).
-                        putObject(INSTRUCTIONS, instructions);
+                            setLocale(localeStr).
+                            setPathDetails(pathDetails).
+                            getHints().
+                            putObject(CALC_POINTS, calcPoints).
+                            putObject(INSTRUCTIONS, instructions);
                     RoutedPath path = routeGap(request);
                     MatchResult mr = new MatchResult(new ArrayList<EdgeMatch>());
                     mr.setGPXEntriesLength(new DistancePlaneProjection().calcDist(
@@ -337,11 +343,11 @@ public class MatchResource {
                     matchResultsList.add(mr);
                     ++offset;
                 }
-                MatchResult matchResult = mapMatching.match(inputGPXEntries, fillGaps, offset);
+                MatchResult matchResult = mapMatching.match(inputGPXEntries, fillGaps, offset, sw);
                 weighting = matchResult.getWeighting();
                 if (offset < mapMatching.getProcessedPointsCount() - 1) {
                     matchResultsList.add(matchResult);
-                    offset += mapMatching.getProcessedPointsCount() - 1;
+                    offset = mapMatching.getProcessedPointsCount() - 1;
                 }
             } while (fillGaps && mapMatching.hasPointsToBeMatched());
 

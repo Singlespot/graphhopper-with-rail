@@ -1,6 +1,7 @@
 package de.geofabrik.railway_routing.http;
 
 
+import com.graphhopper.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,14 +12,6 @@ import com.graphhopper.jackson.Gpx;
 import com.graphhopper.matching.MapMatching;
 import com.graphhopper.matching.MatchResult;
 import com.graphhopper.matching.Observation;
-import com.graphhopper.util.PMap;
-import com.graphhopper.util.Parameters;
-import com.graphhopper.util.Constants;
-import com.graphhopper.util.Helper;
-import com.graphhopper.util.PathMerger;
-import com.graphhopper.util.PointList;
-import com.graphhopper.util.Translation;
-import com.graphhopper.util.TranslationMap;
 
 import de.geofabrik.railway_routing.RailwayHopper;
 import de.geofabrik.railway_routing.util.PatternMatching;
@@ -39,7 +32,7 @@ public class RailwayMatchCommand extends ConfiguredCommand<RailwayRoutingServerC
     public RailwayMatchCommand() {
         super("match", "matches GPX tracks to the railway network");
     }
-    
+
     @Override
     public void configure(Subparser subparser) {
         super.configure(subparser);
@@ -73,7 +66,7 @@ public class RailwayMatchCommand extends ConfiguredCommand<RailwayRoutingServerC
         RailwayHopper hopper = new RailwayHopper();
         hopper.setGraphHopperLocation(configuration.getGraphHopperConfiguration().getString("graph.location", "./graph-cache"));
         hopper.init(configuration.getGraphHopperConfiguration());
-        
+
 
         final Logger logger = LogManager.getLogger(RailwayMatchCommand.class);
         logger.info("Loading graph from cache at {}", hopper.getGraphHopperLocation());
@@ -113,7 +106,9 @@ public class RailwayMatchCommand extends ConfiguredCommand<RailwayRoutingServerC
                     throw new IllegalArgumentException("GPX documents with multiple tracks not supported yet.");
                 }
                 List<Observation> measurements = GpxConversions.getEntries(gpx.trk.get(0));
-                MatchResult mr = mapMatching.match(measurements/*, 0*/);
+                StopWatch sw = new StopWatch();
+                MatchResult mr = mapMatching.match(measurements/*, 0*/, sw);
+                sw.stop();
                 logger.debug("\tmatches: {}", mr.getEdgeMatches().size());
                 logger.debug("\tgpx length: {}", mr.getGpxEntriesLength(), mr.getMatchLength());
 
