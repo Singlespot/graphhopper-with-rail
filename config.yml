@@ -62,7 +62,7 @@ graphhopper:
       turn_costs:
         vehicle_types: [ train, tram, light_rail, subway ]
         # Reversing costs 3 minutes.
-        u_turn_costs: 180
+        u_turn_costs: 300
       custom_model_files: [ all_tracks.json ]
     - name: all_tracks_1435
       turn_costs:

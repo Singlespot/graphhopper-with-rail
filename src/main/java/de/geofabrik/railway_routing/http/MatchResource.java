@@ -3,10 +3,7 @@ package de.geofabrik.railway_routing.http;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -22,6 +19,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.graphhopper.matching.*;
+import com.graphhopper.util.details.PathDetail;
+import com.graphhopper.util.shapes.GHPoint3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -36,10 +36,6 @@ import com.graphhopper.gpx.GpxConversions;
 import com.graphhopper.jackson.Gpx;
 import com.graphhopper.jackson.MultiException;
 import com.graphhopper.jackson.ResponsePathSerializer;
-import com.graphhopper.matching.EdgeMatch;
-import com.graphhopper.matching.MapMatching;
-import com.graphhopper.matching.MatchResult;
-import com.graphhopper.matching.Observation;
 import com.graphhopper.resources.RouteResource;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.PathCalculator;
@@ -273,7 +269,7 @@ public class MatchResource {
             @QueryParam("gpx.track") @DefaultValue("true") boolean withTrack,
             @QueryParam("traversal_keys") @DefaultValue("false") boolean enableTraversalKeys,
             @QueryParam(Parameters.Routing.MAX_VISITED_NODES) @DefaultValue("3000") int maxVisitedNodes,
-            @QueryParam("gps_accuracy") @DefaultValue("40") double gpsAccuracy,
+            @QueryParam("gps_accuracy") @DefaultValue("20") double gpsAccuracy,
             @QueryParam("max_processing_time") @DefaultValue("120") int maxProcessingTimeSeconds,
             @QueryParam("fill_gaps") @DefaultValue("false") boolean fillGaps) throws Exception {
 
@@ -392,11 +388,13 @@ public class MatchResource {
 
                 double matchLength = 0, gpxEntriesLength = 0;
                 int matchMillis = 0;
+                int edgeMatchCount = 0;
                 List<Integer> traversalKeylist = new ArrayList<>();
                 for (MatchResult mr : matchResultsList) {
                     matchLength += mr.getMatchLength();
                     matchMillis += mr.getMatchMillis();
                     gpxEntriesLength += mr.getGpxEntriesLength();
+                    edgeMatchCount += mr.getEdgeMatches().size();
                     if (enableTraversalKeys) {
                         for (EdgeMatch em : mr.getEdgeMatches()) {
                             EdgeIteratorState edge = em.getEdgeState();
@@ -414,6 +412,35 @@ public class MatchResource {
                 if (enableTraversalKeys) {
                     map.putPOJO("traversal_keys", traversalKeylist);
                 }
+                if (responsePath.getPathDetails().get("edge_key") != null) {
+                    List<Object> observationIndexes = new ArrayList<>();
+                    int i = 0;
+                    assert edgeMatchCount == responsePath.getPathDetails().get("edge_key").size();
+                    for (MatchResult matchResult : matchResultsList) {
+                        for (EdgeMatch em : matchResult.getEdgeMatches()) {
+                            if (em.getStates().size() > 0) {
+                                for (State state : em.getStates()) {
+                                    GHPoint point = state.getEntry().getPoint();
+                                    GHPoint3D snappedPoint = state.getSnap().getSnappedPoint();
+                                    int snappedEdgeStartPointIdx = responsePath.getPathDetails().get("edge_key").get(i).getFirst();
+                                    int snappedEdgeLastPointIdx = responsePath.getPathDetails().get("edge_key").get(i).getLast();
+                                    int bestCandidateIdx = -1;
+                                    for (int j = snappedEdgeStartPointIdx; j <= snappedEdgeLastPointIdx; j++) {
+                                        GHPoint3D candidate = responsePath.getPoints().get(j);
+                                        if (candidate.getLat() == snappedPoint.getLat() && candidate.getLon() == snappedPoint.getLon()) {
+                                            bestCandidateIdx = j;
+                                            break;
+                                        }
+                                    }
+                                    observationIndexes.add(new ArrayList<Integer>(Arrays.asList(point.index, bestCandidateIdx)));
+                                }
+                            }
+                            i++;
+                        }
+                    }
+                    map.putPOJO("observation_indexes", observationIndexes);
+                }
+
                 return Response.ok(map).
                         header("X-GH-Took", "" + Math.round(took * 1000)).
                         build();
