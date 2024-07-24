@@ -15,11 +15,13 @@ public class RailwayOSMParsers extends OSMParsers {
     }
 
     public RailwayOSMParsers(List<String> ignoredHighways, List<TagParser> wayTagParsers,
-            List<RelationTagParser> relationTagParsers, List<RestrictionTagParser> restrictionTagParsers) {
+                             List<RelationTagParser> relationTagParsers, List<RestrictionTagParser> restrictionTagParsers) {
         super(ignoredHighways, wayTagParsers, relationTagParsers, restrictionTagParsers);
     }
 
     public boolean acceptWay(ReaderWay way) {
-        return way.getTag("railway") != null;
+        boolean isRailway = way.getTag("railway") != null;
+
+        return isRailway || super.acceptWay(way);
     }
 }
