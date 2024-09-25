@@ -308,44 +308,45 @@ public class MatchResource {
             // Offset from start of the input points
             int offset = 0;
             Weighting weighting = null;
-            do {
-                // Fill gap with normal routing if matching in the last iteration of this loop ended at a gap.
-                // mapMatching.getSucessfullyMatchedPoints() returns -1 if no point has been matched yet (e.g. gap between first and second point).
-                if (weighting != null && mapMatching.matchingAttempted() && mapMatching.getProcessedPointsCount() < inputGPXEntries.size()) {
-                    int start_point = offset;
-                    List<GHPoint> points = new ArrayList<GHPoint>();
-                    points.add((GHPoint) inputGPXEntries.get(start_point).getPoint());
-                    points.add((GHPoint) inputGPXEntries.get(start_point + 1).getPoint());
-                    GHRequest request = new GHRequest(points);
-                    initHints(request.getHints(), uriInfo.getQueryParameters());
-                    request.setProfile(profile).
-                            setLocale(localeStr).
-                            setPathDetails(pathDetails).
-                            getHints().
-                            putObject(CALC_POINTS, calcPoints).
-                            putObject(INSTRUCTIONS, instructions);
-                    RoutedPath path = routeGap(request);
-                    MatchResult mr = new MatchResult(new ArrayList<EdgeMatch>());
-                    mr.setGPXEntriesLength(new DistancePlaneProjection().calcDist(
-                            inputGPXEntries.get(start_point).getPoint().lat,
-                            inputGPXEntries.get(start_point).getPoint().lon,
-                            inputGPXEntries.get(start_point + 1).getPoint().lat,
-                            inputGPXEntries.get(start_point + 1).getPoint().lon));
-                    mr.setMatchMillis(path.path.getTime());
-                    mr.setMatchLength(path.path.getDistance());
-                    mr.setGraph(path.queryGraph);
-                    mr.setWeighting(weighting);
-                    mr.setMergedPath(path.path);
-                    matchResultsList.add(mr);
-                    ++offset;
-                }
-                MatchResult matchResult = mapMatching.match(inputGPXEntries, fillGaps, offset, sw);
-                weighting = matchResult.getWeighting();
-                if (offset < mapMatching.getProcessedPointsCount() - 1) {
-                    matchResultsList.add(matchResult);
-                    offset = mapMatching.getProcessedPointsCount() - 1;
-                }
-            } while (fillGaps && mapMatching.hasPointsToBeMatched());
+//            do {
+            // Fill gap with normal routing if matching in the last iteration of this loop ended at a gap.
+            // mapMatching.getSucessfullyMatchedPoints() returns -1 if no point has been matched yet (e.g. gap between first and second point).
+//                if (weighting != null && mapMatching.matchingAttempted() && mapMatching.getProcessedPointsCount() < inputGPXEntries.size()) {
+            int start_point = 0;
+            int last_point = inputGPXEntries.size() - 1;
+            List<GHPoint> points = new ArrayList<GHPoint>();
+            points.add((GHPoint) inputGPXEntries.get(start_point).getPoint());
+            points.add((GHPoint) inputGPXEntries.get(last_point).getPoint());
+            GHRequest request = new GHRequest(points);
+            initHints(request.getHints(), uriInfo.getQueryParameters());
+            request.setProfile(profile).
+                    setLocale(localeStr).
+                    setPathDetails(pathDetails).
+                    getHints().
+                    putObject(CALC_POINTS, calcPoints).
+                    putObject(INSTRUCTIONS, instructions);
+            RoutedPath path = routeGap(request);
+            MatchResult mres = new MatchResult(new ArrayList<EdgeMatch>());
+            mres.setGPXEntriesLength(new DistancePlaneProjection().calcDist(
+                    inputGPXEntries.get(start_point).getPoint().lat,
+                    inputGPXEntries.get(start_point).getPoint().lon,
+                    inputGPXEntries.get(start_point + 1).getPoint().lat,
+                    inputGPXEntries.get(start_point + 1).getPoint().lon));
+            mres.setMatchMillis(path.path.getTime());
+            mres.setMatchLength(path.path.getDistance());
+            mres.setGraph(path.queryGraph);
+            mres.setWeighting(weighting);
+            mres.setMergedPath(path.path);
+            matchResultsList.add(mres);
+            ++offset;
+//                }
+//                MatchResult matchResult = mapMatching.match(inputGPXEntries, fillGaps, offset, sw);
+//                weighting = matchResult.getWeighting();
+//                if (offset < mapMatching.getProcessedPointsCount() - 1) {
+//                    matchResultsList.add(matchResult);
+//                    offset = mapMatching.getProcessedPointsCount() - 1;
+//                }
+//            } while (fillGaps && mapMatching.hasPointsToBeMatched());
 
             Translation tr = trMap.getWithFallBack(Helper.getLocale(localeStr));
             RamerDouglasPeucker peucker = new RamerDouglasPeucker().setMaxDistance(minPathPrecision);
