@@ -307,20 +307,22 @@ public class MatchResource {
             List<MatchResult> matchResultsList = new ArrayList<MatchResult>(2);
             // route between first and last point
             List<GHPoint> routing_points = new ArrayList<GHPoint>();
-
-            GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
-            GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
-            routing_points.add(start_gh_point);
-            routing_points.add(end_gh_point);
-            GHRequest routing_request = new GHRequest(routing_points);
-            initHints(routing_request.getHints(), uriInfo.getQueryParameters());
-            routing_request.setProfile(profile).
-                    setLocale(localeStr).
-                    setPathDetails(pathDetails).
-                    getHints().
-                    putObject(CALC_POINTS, calcPoints).
-                    putObject(INSTRUCTIONS, instructions);
-            RoutedPath routed_path = routeGap(routing_request);
+            RoutedPath routed_path = null;
+            if (profile.equals("all_tracks")) {
+                GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
+                GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
+                routing_points.add(start_gh_point);
+                routing_points.add(end_gh_point);
+                GHRequest routing_request = new GHRequest(routing_points);
+                initHints(routing_request.getHints(), uriInfo.getQueryParameters());
+                routing_request.setProfile(profile).
+                        setLocale(localeStr).
+                        setPathDetails(pathDetails).
+                        getHints().
+                        putObject(CALC_POINTS, calcPoints).
+                        putObject(INSTRUCTIONS, instructions);
+                routed_path = routeGap(routing_request);
+            }
 
             // Offset from start of the input points
             int offset = 0;
