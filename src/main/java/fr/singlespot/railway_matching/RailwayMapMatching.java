@@ -67,10 +67,10 @@ public class RailwayMapMatching extends MapMatching {
         statistics.put("filteredObservations", filteredObservations.size());
 
         // Snap observations to links. Generates multiple candidate snaps per observation.
-        List<List<Snap>> snapsPerObservation = filteredObservations.stream()
+        List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream()
                 .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy))
                 .collect(Collectors.toList());
-        queryGraph = QueryGraph.create(graph, snapsPerObservation.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+        queryGraph = QueryGraph.create(graph, snapsPerObservationTmp.stream().flatMap(Collection::stream).collect(Collectors.toList()));
 
         MatchResult result;
         List<SequenceState<State, Observation, Path>> seq;
@@ -81,7 +81,7 @@ public class RailwayMapMatching extends MapMatching {
             List<EdgeIteratorState> edgeIteratorStates = routed_path.calcEdges();
             int maxEdgeIndex = -1;
             // find the snap for each observation that is on the routed_path
-            for (List<Snap> snaps : snapsPerObservation) {
+            for (List<Snap> snaps : snapsPerObservationTmp) {
                 boolean snapsOnRoutedPath = false;
                 for (Snap snap : snaps) {
                     if (snapsOnRoutedPath) break;
@@ -107,7 +107,7 @@ public class RailwayMapMatching extends MapMatching {
         if (anySnapNotOnRoutedPath || routed_path == null) {
             // Creates candidates from the Snaps of all observations (a candidate is basically a
             // Snap + direction). We need to put lower the accuracy to a max value of 300
-            snapsPerObservation = filteredObservations.stream()
+            List<List<Snap>> snapsPerObservation = filteredObservations.stream()
                     .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.min(o.getPoint().accuracy, 300.0)))
                     .collect(Collectors.toList());
             statistics.put("snapsPerObservation", snapsPerObservation.stream().mapToInt(Collection::size).toArray());
