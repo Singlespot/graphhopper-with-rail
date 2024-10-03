@@ -218,7 +218,7 @@ public class MatchResource {
     /**
      * Route between two points and return result as a path.
      */
-    private RoutedPath routeGap(GHRequest request) {
+    private RoutedPath routeGap(GHRequest request, boolean initialRoute) {
         // Copied from com.graphhopper.routing.Router.route
         if (request.getPoints().size() > 2) {
             throw new IllegalArgumentException("Route request with vias are not supported for gap routing.");
@@ -226,9 +226,24 @@ public class MatchResource {
         Router router = hopper.createRouter();
         Solver solver = router.createSolver(request);
         solver.init();
-        List<Snap> snaps = ViaRouting.lookup(hopper.getEncodingManager(), request.getPoints(),
-                solver.createSnapFilter(), hopper.getLocationIndex(), request.getSnapPreventions(),
-                request.getPointHints(), solver.createDirectedEdgeFilter(), request.getHeadings());
+        List<Snap> snaps = null;
+        if (initialRoute) {
+            PMap hints = new PMap();
+            PMap profileResolverHints = new PMap(hints);
+            profileResolverHints.putObject("profile", request.getProfile());
+            profileResolverHints.putObject(Parameters.CH.DISABLE, true);
+            String profile = profileResolver.resolveProfile(profileResolverHints);
+            hints.putObject("profile", profile);
+            RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
+            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
+            snaps = ViaRouting.lookup(hopper.getEncodingManager(), request.getPoints(),
+                    solver.createSnapFilter(), hopper.getLocationIndex(), request.getSnapPreventions(),
+                    request.getPointHints(), solver.createDirectedEdgeFilter(), request.getHeadings());
+        } else {
+            snaps = ViaRouting.lookup(hopper.getEncodingManager(), request.getPoints(),
+                    solver.createSnapFilter(), hopper.getLocationIndex(), request.getSnapPreventions(),
+                    request.getPointHints(), solver.createDirectedEdgeFilter(), request.getHeadings());
+        }
         // (base) query graph used to resolve headings, curbsides etc. this is not necessarily the same thing as
         // the (possibly implementation specific) query graph used by PathCalculator
         QueryGraph queryGraph = QueryGraph.create(hopper.getBaseGraph(), snaps);
@@ -321,7 +336,7 @@ public class MatchResource {
                         getHints().
                         putObject(CALC_POINTS, calcPoints).
                         putObject(INSTRUCTIONS, instructions);
-                routed_path = routeGap(routing_request);
+                routed_path = routeGap(routing_request, true);
             }
 
             // Offset from start of the input points
@@ -343,7 +358,7 @@ public class MatchResource {
                             getHints().
                             putObject(CALC_POINTS, calcPoints).
                             putObject(INSTRUCTIONS, instructions);
-                    RoutedPath path = routeGap(request);
+                    RoutedPath path = routeGap(request, false);
                     MatchResult mr = new MatchResult(new ArrayList<EdgeMatch>());
                     mr.setGPXEntriesLength(new DistancePlaneProjection().calcDist(
                             inputGPXEntries.get(start_point).getPoint().lat,
