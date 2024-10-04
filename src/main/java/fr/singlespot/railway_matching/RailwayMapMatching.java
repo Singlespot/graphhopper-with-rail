@@ -77,7 +77,7 @@ public class RailwayMapMatching extends MapMatching {
         List<List<Snap>> snapsPerObservationOnRoutedPath = new ArrayList<>();
         boolean anySnapNotOnRoutedPath = false;
         // check if at least one snap is on routed_path
-        if (routed_path != null) {
+        if (routed_path != null && routed_path.isFound()) {
             List<EdgeIteratorState> edgeIteratorStates = routed_path.calcEdges();
             int maxEdgeIndex = -1;
             // find the snap for each observation that is on the routed_path

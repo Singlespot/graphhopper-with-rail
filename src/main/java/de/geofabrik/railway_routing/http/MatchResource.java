@@ -20,6 +20,7 @@ import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.ParserConfigurationException;
 
 import com.graphhopper.matching.*;
+import com.graphhopper.routing.*;
 import com.graphhopper.util.shapes.GHPoint3D;
 import fr.singlespot.railway_matching.RailwayMapMatching;
 import org.slf4j.Logger;
@@ -37,11 +38,7 @@ import com.graphhopper.jackson.Gpx;
 import com.graphhopper.jackson.MultiException;
 import com.graphhopper.jackson.ResponsePathSerializer;
 import com.graphhopper.resources.RouteResource;
-import com.graphhopper.routing.Path;
-import com.graphhopper.routing.PathCalculator;
 import com.graphhopper.http.ProfileResolver;
-import com.graphhopper.routing.Router;
-import com.graphhopper.routing.ViaRouting;
 import com.graphhopper.routing.Router.Solver;
 import com.graphhopper.routing.querygraph.QueryGraph;
 import com.graphhopper.routing.weighting.Weighting;
@@ -226,7 +223,7 @@ public class MatchResource {
         Router router = hopper.createRouter();
         Solver solver = router.createSolver(request);
         solver.init();
-        List<Snap> snaps = null;
+        List<List<Snap>> filteredSnapsList = new ArrayList<>();
         if (initialRoute) {
             PMap hints = new PMap();
             PMap profileResolverHints = new PMap(hints);
@@ -236,27 +233,57 @@ public class MatchResource {
             hints.putObject("profile", profile);
             RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
             List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
-            snaps = ViaRouting.lookup(hopper.getEncodingManager(), request.getPoints(),
-                    solver.createSnapFilter(), hopper.getLocationIndex(), request.getSnapPreventions(),
-                    request.getPointHints(), solver.createDirectedEdgeFilter(), request.getHeadings());
+            for (List<Snap> snapsTmp : snapsList) {
+                List<String> seenEdgesNames = new ArrayList<>();
+                List<Snap> snapsTmpFiltered = new ArrayList<>();
+                for (Snap snap : snapsTmp) {
+                    if (!seenEdgesNames.contains((String) snap.getClosestEdge().getValue("street_name"))
+                            && !seenEdgesNames.contains((String) snap.getClosestEdge().getValue("street_ref"))) {
+                        snapsTmpFiltered.add(snap);
+                        if (snap.getClosestEdge().getValue("street_name") != null) {
+                            seenEdgesNames.add((String) snap.getClosestEdge().getValue("street_name"));
+                        }
+                        if (snap.getClosestEdge().getValue("street_ref") != null) {
+                            seenEdgesNames.add((String) snap.getClosestEdge().getValue("street_ref"));
+                        }
+                    }
+                }
+                filteredSnapsList.add(snapsTmpFiltered);
+            }
+
         } else {
-            snaps = ViaRouting.lookup(hopper.getEncodingManager(), request.getPoints(),
+            List<Snap> singleSnaps = ViaRouting.lookup(hopper.getEncodingManager(), request.getPoints(),
                     solver.createSnapFilter(), hopper.getLocationIndex(), request.getSnapPreventions(),
                     request.getPointHints(), solver.createDirectedEdgeFilter(), request.getHeadings());
+            filteredSnapsList = Collections.singletonList(singleSnaps);
         }
         // (base) query graph used to resolve headings, curbsides etc. this is not necessarily the same thing as
         // the (possibly implementation specific) query graph used by PathCalculator
-        QueryGraph queryGraph = QueryGraph.create(hopper.getBaseGraph(), snaps);
+        QueryGraph queryGraph = QueryGraph.create(hopper.getBaseGraph(), filteredSnapsList.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+//        TODO if we want to implement alternate routes
+//        request.getHints().putObject("MAX_PATHS", 3);
+//        request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE);
         PathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
         boolean passThrough = false;
         boolean forceCurbsides = false;
-        // We do not use Solver.createWeighting but use our own weighting which is used for matched segments as well.
-        ViaRouting.Result result = ViaRouting.calcPaths(request.getPoints(), queryGraph, snaps,
-                solver.createDirectedEdgeFilter(), pathCalculator, request.getCurbsides(), forceCurbsides,
-                request.getHeadings(), passThrough);
+        ViaRouting.Result result;
 
-        RoutedPath path = new RoutedPath(result.paths.get(0), queryGraph);
-        return path;
+        if (filteredSnapsList.isEmpty()) {
+            return new RoutedPath(null, null);
+        }
+
+        for (Snap firstSnap : filteredSnapsList.get(0)) {
+            for (Snap secondSnap : filteredSnapsList.get(1)) {
+                // We do not use Solver.createWeighting but use our own weighting which is used for matched segments as well.
+                result = ViaRouting.calcPaths(request.getPoints(), queryGraph, new ArrayList<Snap>(Arrays.asList(firstSnap, secondSnap)),
+                        solver.createDirectedEdgeFilter(), pathCalculator, request.getCurbsides(), forceCurbsides,
+                        request.getHeadings(), passThrough);
+                if (result.paths.get(0).isFound()) {
+                    return new RoutedPath(result.paths.get(0), queryGraph);
+                }
+            }
+        }
+        return new RoutedPath(null, null);
     }
 
     @POST
