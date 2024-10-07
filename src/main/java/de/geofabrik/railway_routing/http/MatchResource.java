@@ -313,7 +313,8 @@ public class MatchResource {
             @QueryParam(Parameters.Routing.MAX_VISITED_NODES) @DefaultValue("3000") int maxVisitedNodes,
             @QueryParam("gps_accuracy") @DefaultValue("20") double gpsAccuracy,
             @QueryParam("max_processing_time") @DefaultValue("120") int maxProcessingTimeSeconds,
-            @QueryParam("fill_gaps") @DefaultValue("false") boolean fillGaps) throws Exception {
+            @QueryParam("fill_gaps") @DefaultValue("false") boolean fillGaps,
+            @QueryParam("use_initial_routing") @DefaultValue("true") boolean useInitialRouting) throws Exception {
 
         StopWatch sw = new StopWatch().start();
         boolean writeGPX = "gpx".equalsIgnoreCase(outType);
@@ -350,7 +351,7 @@ public class MatchResource {
             // route between first and last point
             List<GHPoint> routing_points = new ArrayList<GHPoint>();
             RoutedPath routed_path = null;
-            if (profile.equals("all_tracks")) {
+            if (profile.equals("all_tracks") && useInitialRouting) {
                 GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
                 GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
                 routing_points.add(start_gh_point);
