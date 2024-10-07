@@ -350,7 +350,7 @@ public class MatchResource {
             List<MatchResult> matchResultsList = new ArrayList<MatchResult>(2);
             // route between first and last point
             List<GHPoint> routing_points = new ArrayList<GHPoint>();
-            RoutedPath routed_path = null;
+            Path routed_path = null;
             if (profile.equals("all_tracks") && useInitialRouting) {
                 GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
                 GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
@@ -364,7 +364,7 @@ public class MatchResource {
                         getHints().
                         putObject(CALC_POINTS, calcPoints).
                         putObject(INSTRUCTIONS, instructions);
-                routed_path = routeGap(routing_request, true);
+                routed_path = routeGap(routing_request, true).path;
             }
 
             // Offset from start of the input points
@@ -401,7 +401,7 @@ public class MatchResource {
                     matchResultsList.add(mr);
                     ++offset;
                 }
-                MatchResult matchResult = mapMatching.match_with_routing(inputGPXEntries, fillGaps, offset, sw, routed_path.path);
+                MatchResult matchResult = mapMatching.match_with_routing(inputGPXEntries, fillGaps, offset, sw, routed_path);
                 weighting = matchResult.getWeighting();
                 if (offset < mapMatching.getProcessedPointsCount() - 1) {
                     matchResultsList.add(matchResult);
