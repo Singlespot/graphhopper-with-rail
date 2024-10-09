@@ -81,7 +81,8 @@ public class RailwayMapMatching extends MapMatching {
             List<EdgeIteratorState> edgeIteratorStates = routed_path.calcEdges();
             int maxEdgeIndex = -1;
             // find the snap for each observation that is on the routed_path
-            for (List<Snap> snaps : snapsPerObservationTmp) {
+            for (int snapsIndex = 0, snapsPerObservationTmpSize = snapsPerObservationTmp.size(); snapsIndex < snapsPerObservationTmpSize; snapsIndex++) {
+                List<Snap> snaps = snapsPerObservationTmp.get(snapsIndex);
                 boolean snapsOnRoutedPath = false;
                 for (Snap snap : snaps) {
                     if (snapsOnRoutedPath) break;
@@ -89,7 +90,7 @@ public class RailwayMapMatching extends MapMatching {
                         EdgeIteratorState e = edgeIteratorStates.get(edgeIndex);
                         if (resolveToRealEdge(e).getEdge() == snap.getClosestEdge().getEdge()) {
 //                          Add a list with just snap since we know it is the snap on the path
-                            if (edgeIndex > maxEdgeIndex) {
+                            if (edgeIndex > maxEdgeIndex || snapsIndex == snapsPerObservationTmpSize - 1) {
                                 snapsPerObservationOnRoutedPath.add(Collections.singletonList(snap));
                                 maxEdgeIndex = edgeIndex;
                             }

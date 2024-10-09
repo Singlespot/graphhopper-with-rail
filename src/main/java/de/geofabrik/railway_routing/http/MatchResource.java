@@ -283,6 +283,7 @@ public class MatchResource {
                 }
             }
         }
+        System.out.println("No path found");
         return new RoutedPath(null, null);
     }
 
