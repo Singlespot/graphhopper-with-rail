@@ -215,7 +215,7 @@ public class MatchResource {
     /**
      * Route between two points and return result as a path.
      */
-    private RoutedPath routeGap(GHRequest request, boolean initialRoute) {
+    private List<RoutedPath> routeGap(GHRequest request, boolean initialRoute) {
         // Copied from com.graphhopper.routing.Router.route
         if (request.getPoints().size() > 2) {
             throw new IllegalArgumentException("Route request with vias are not supported for gap routing.");
@@ -232,7 +232,7 @@ public class MatchResource {
             String profile = profileResolver.resolveProfile(profileResolverHints);
             hints.putObject("profile", profile);
             RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
-            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
+            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, Math.min(p.accuracy, 100.0))).collect(Collectors.toList());
             for (List<Snap> snapsTmp : snapsList) {
                 List<String> seenEdgesNames = new ArrayList<>();
                 List<Snap> snapsTmpFiltered = new ArrayList<>();
@@ -269,22 +269,28 @@ public class MatchResource {
         ViaRouting.Result result;
 
         if (filteredSnapsList.isEmpty()) {
-            return new RoutedPath(null, null);
+            return Collections.singletonList(new RoutedPath(null, null));
         }
 
+        List<RoutedPath> possiblePaths = new ArrayList<>();
         for (Snap firstSnap : filteredSnapsList.get(0)) {
             for (Snap secondSnap : filteredSnapsList.get(1)) {
                 // We do not use Solver.createWeighting but use our own weighting which is used for matched segments as well.
                 result = ViaRouting.calcPaths(request.getPoints(), queryGraph, new ArrayList<Snap>(Arrays.asList(firstSnap, secondSnap)),
                         solver.createDirectedEdgeFilter(), pathCalculator, request.getCurbsides(), forceCurbsides,
                         request.getHeadings(), passThrough);
-                if (result.paths.get(0).isFound()) {
-                    return new RoutedPath(result.paths.get(0), queryGraph);
+                if (result.paths.get(0).isFound() && result.paths.get(0).getDistance() > 0) {
+                    possiblePaths.add(new RoutedPath(result.paths.get(0), queryGraph));
                 }
             }
         }
-        System.out.println("No path found");
-        return new RoutedPath(null, null);
+        if (possiblePaths.isEmpty()) {
+            System.out.println("No path found");
+            return Collections.singletonList(new RoutedPath(null, null));
+        } else {
+            possiblePaths.sort(Comparator.comparingDouble(rp -> rp.path.getDistance()));
+            return possiblePaths;
+        }
     }
 
     @POST
@@ -351,7 +357,7 @@ public class MatchResource {
             List<MatchResult> matchResultsList = new ArrayList<MatchResult>(2);
             // route between first and last point
             List<GHPoint> routing_points = new ArrayList<GHPoint>();
-            Path routed_path = null;
+            List<Path> routedPaths = new ArrayList<Path>(Collections.singletonList(null));
             if (profile.equals("all_tracks") && useInitialRouting) {
                 GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
                 GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
@@ -365,7 +371,7 @@ public class MatchResource {
                         getHints().
                         putObject(CALC_POINTS, calcPoints).
                         putObject(INSTRUCTIONS, instructions);
-                routed_path = routeGap(routing_request, true).path;
+                routedPaths = routeGap(routing_request, true).stream().map(rp -> rp.path).collect(Collectors.toList());
             }
 
             // Offset from start of the input points
@@ -387,7 +393,7 @@ public class MatchResource {
                             getHints().
                             putObject(CALC_POINTS, calcPoints).
                             putObject(INSTRUCTIONS, instructions);
-                    RoutedPath path = routeGap(request, false);
+                    RoutedPath path = routeGap(request, false).get(0);
                     MatchResult mr = new MatchResult(new ArrayList<EdgeMatch>());
                     mr.setGPXEntriesLength(new DistancePlaneProjection().calcDist(
                             inputGPXEntries.get(start_point).getPoint().lat,
@@ -402,7 +408,7 @@ public class MatchResource {
                     matchResultsList.add(mr);
                     ++offset;
                 }
-                MatchResult matchResult = mapMatching.match_with_routing(inputGPXEntries, fillGaps, offset, sw, routed_path);
+                MatchResult matchResult = mapMatching.match_with_routing(inputGPXEntries, fillGaps, offset, sw, routedPaths);
                 weighting = matchResult.getWeighting();
                 if (offset < mapMatching.getProcessedPointsCount() - 1) {
                     matchResultsList.add(matchResult);
