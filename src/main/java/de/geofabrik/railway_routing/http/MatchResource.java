@@ -75,6 +75,22 @@ public class MatchResource {
     private final TranslationMap trMap;
     private final String osmDate;
 
+    private class EdgeDistances {
+        private final HashMap<String, Double> edgeDistances = new HashMap<>();
+
+        public void put(String edgeNameOrRef, double distance) {
+            edgeDistances.put(edgeNameOrRef, distance);
+        }
+
+        public List<String> getEdgesNamesOrRefs() {
+            return new ArrayList<>(edgeDistances.keySet());
+        }
+
+        public boolean seen(String edgeNameOrRef, double queryDistance) {
+            return edgeDistances.containsKey(edgeNameOrRef) && edgeDistances.get(edgeNameOrRef) <= queryDistance;
+        }
+    }
+
     @Inject
     public MatchResource(GraphHopperConfig config, RailwayHopper graphHopper, ProfileResolver profileResolver,
                          TranslationMap trMap) {
@@ -232,19 +248,20 @@ public class MatchResource {
             String profile = profileResolver.resolveProfile(profileResolverHints);
             hints.putObject("profile", profile);
             RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
-            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, Math.min(p.accuracy, 100.0))).collect(Collectors.toList());
+            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
             for (List<Snap> snapsTmp : snapsList) {
-                List<String> seenEdgesNames = new ArrayList<>();
+                EdgeDistances seenEdgesNames = new EdgeDistances();
                 List<Snap> snapsTmpFiltered = new ArrayList<>();
                 for (Snap snap : snapsTmp) {
-                    if (!seenEdgesNames.contains((String) snap.getClosestEdge().getValue("street_name"))
-                            && !seenEdgesNames.contains((String) snap.getClosestEdge().getValue("street_ref"))) {
+                    if (!seenEdgesNames.seen((String) snap.getClosestEdge().getValue("street_name"), snap.getQueryDistance())
+                            && !seenEdgesNames.seen((String) snap.getClosestEdge().getValue("street_ref"), snap.getQueryDistance())
+                            && !Objects.equals(snap.getClosestEdge().getName(), "")) {
                         snapsTmpFiltered.add(snap);
                         if (snap.getClosestEdge().getValue("street_name") != null) {
-                            seenEdgesNames.add((String) snap.getClosestEdge().getValue("street_name"));
+                            seenEdgesNames.put((String) snap.getClosestEdge().getValue("street_name"), snap.getQueryDistance());
                         }
                         if (snap.getClosestEdge().getValue("street_ref") != null) {
-                            seenEdgesNames.add((String) snap.getClosestEdge().getValue("street_ref"));
+                            seenEdgesNames.put((String) snap.getClosestEdge().getValue("street_ref"), snap.getQueryDistance());
                         }
                     }
                 }
