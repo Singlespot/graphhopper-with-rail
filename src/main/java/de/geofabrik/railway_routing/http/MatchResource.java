@@ -75,20 +75,44 @@ public class MatchResource {
     private final TranslationMap trMap;
     private final String osmDate;
 
-    private class EdgeDistances {
-        private final HashMap<String, Double> edgeDistances = new HashMap<>();
+    // Class that will hold list of Snap objects and will be instantiated with a List of Snap objects, adding only
+    // Snap objects that either have a unique snap.getClosestEdge().getValue("street_name") or snap.getClosestEdge().getValue("street_ref")
+    // or have the lowest snap.getQueryDistance() for that street_name or street_ref
+    private static class SnapListEdgesFilter {
+        private final List<Snap> snapList;
 
-        public void put(String edgeNameOrRef, double distance) {
-            edgeDistances.put(edgeNameOrRef, distance);
+        private static Integer getSnapKey(Snap snap) {
+            String snapEdgeRefOrName = (String) (snap.getClosestEdge().getValue("street_ref") == null ? snap.getClosestEdge().getValue("street_name") : snap.getClosestEdge().getValue("street_ref"));
+            return Objects.hash(snapEdgeRefOrName);
         }
 
-        public List<String> getEdgesNamesOrRefs() {
-            return new ArrayList<>(edgeDistances.keySet());
+        public SnapListEdgesFilter(List<Snap> snapListInput) {
+            HashMap<Integer, Snap> snapMap = new HashMap<>();
+            for (Snap snap : snapListInput) {
+                if (!Objects.equals(snap.getClosestEdge().getName(), "")
+                        && (snapMap.get(getSnapKey(snap)) == null || snap.getQueryDistance() < snapMap.get(getSnapKey(snap)).getQueryDistance())) {
+                    snapMap.put(getSnapKey(snap), snap);
+                }
+            }
+            this.snapList = new ArrayList<>(snapMap.values());
         }
 
-        public boolean seen(String edgeNameOrRef, double queryDistance) {
-            return edgeDistances.containsKey(edgeNameOrRef) && edgeDistances.get(edgeNameOrRef) <= queryDistance;
+        public List<Snap> getFilteredList() {
+            return snapList;
         }
+    }
+
+    private static class PathWithSnapExtremities {
+        public final RoutedPath path;
+        public final Snap startSnap;
+        public final Snap endSnap;
+
+        public PathWithSnapExtremities(RoutedPath path, Snap startSnap, Snap endSnap) {
+            this.path = path;
+            this.startSnap = startSnap;
+            this.endSnap = endSnap;
+        }
+
     }
 
     @Inject
@@ -250,21 +274,7 @@ public class MatchResource {
             RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
             List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
             for (List<Snap> snapsTmp : snapsList) {
-                EdgeDistances seenEdgesNames = new EdgeDistances();
-                List<Snap> snapsTmpFiltered = new ArrayList<>();
-                for (Snap snap : snapsTmp) {
-                    if (!seenEdgesNames.seen((String) snap.getClosestEdge().getValue("street_name"), snap.getQueryDistance())
-                            && !seenEdgesNames.seen((String) snap.getClosestEdge().getValue("street_ref"), snap.getQueryDistance())
-                            && !Objects.equals(snap.getClosestEdge().getName(), "")) {
-                        snapsTmpFiltered.add(snap);
-                        if (snap.getClosestEdge().getValue("street_name") != null) {
-                            seenEdgesNames.put((String) snap.getClosestEdge().getValue("street_name"), snap.getQueryDistance());
-                        }
-                        if (snap.getClosestEdge().getValue("street_ref") != null) {
-                            seenEdgesNames.put((String) snap.getClosestEdge().getValue("street_ref"), snap.getQueryDistance());
-                        }
-                    }
-                }
+                List<Snap> snapsTmpFiltered = new SnapListEdgesFilter(snapsTmp).getFilteredList();
                 filteredSnapsList.add(snapsTmpFiltered);
             }
 
@@ -289,7 +299,7 @@ public class MatchResource {
             return Collections.singletonList(new RoutedPath(null, null));
         }
 
-        List<RoutedPath> possiblePaths = new ArrayList<>();
+        List<PathWithSnapExtremities> possiblePathsWithExtremities = new ArrayList<>();
         for (Snap firstSnap : filteredSnapsList.get(0)) {
             for (Snap secondSnap : filteredSnapsList.get(1)) {
                 // We do not use Solver.createWeighting but use our own weighting which is used for matched segments as well.
@@ -297,15 +307,18 @@ public class MatchResource {
                         solver.createDirectedEdgeFilter(), pathCalculator, request.getCurbsides(), forceCurbsides,
                         request.getHeadings(), passThrough);
                 if (result.paths.get(0).isFound() && result.paths.get(0).getDistance() > 0) {
-                    possiblePaths.add(new RoutedPath(result.paths.get(0), queryGraph));
+                    possiblePathsWithExtremities.add(new PathWithSnapExtremities(new RoutedPath(result.paths.get(0), queryGraph), firstSnap, secondSnap));
                 }
             }
         }
-        if (possiblePaths.isEmpty()) {
+        if (possiblePathsWithExtremities.isEmpty()) {
             System.out.println("No path found");
             return Collections.singletonList(new RoutedPath(null, null));
         } else {
-            possiblePaths.sort(Comparator.comparingDouble(rp -> rp.path.getDistance()));
+            List<RoutedPath> possiblePaths;
+//            We want the shortest path possible for the snaps that are closest to their observations
+            possiblePathsWithExtremities.sort(Comparator.comparingDouble(pwe -> (pwe.startSnap.getQueryDistance() + pwe.endSnap.getQueryDistance() + 1e-10) * pwe.path.path.getDistance()));
+            possiblePaths = possiblePathsWithExtremities.stream().map(pwe -> pwe.path).collect(Collectors.toList());
             return possiblePaths;
         }
     }
