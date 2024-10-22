@@ -8,8 +8,7 @@
 {
   "distance_influence": 0,
   "priority": [
-    { "if": "foot_access", "multiply_by": "0.5" },
-    { "else_if": "!rail_access", "multiply_by": "0" }
+    { "if": "!rail_access", "multiply_by": "0" }
   ],
   "speed": [
     { "if": "true", "limit_to": "rail_average_speed" }
