@@ -103,7 +103,7 @@ public class RailwayMapMatching extends MapMatching {
                             EdgeIteratorState e = pathEdges.get(edgeIndex);
                             EdgeIteratorState pathEdge = resolveToRealEdge(e);
                             EdgeIteratorState snapEdge = snap.getClosestEdge();
-                                  if (pathEdge.getEdge() == snapEdge.getEdge()) {
+                            if (pathEdge.getEdge() == snapEdge.getEdge()) {
                                 //  Add a list with just snap since we know it is the snap on the path
                                 if (edgeIndex > maxEdgeIndex || snapsIndex == snapsPerObservationTmpSize - 1) {
                                     snapsPerObservationOnRoutedPathTmp.add(Collections.singletonList(snap));
@@ -135,7 +135,8 @@ public class RailwayMapMatching extends MapMatching {
 
             for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
                 List<Boolean> snapNotOnRoutedPath = snapsNotOnRoutedPaths.get(observationsIndex);
-                if (snapNotOnRoutedPath.stream().allMatch(Boolean::booleanValue)) {
+                List<Snap> snaps = snapsPerObservationTmp.get(observationsIndex);
+                if (snapNotOnRoutedPath.stream().allMatch(Boolean::booleanValue) && !snaps.isEmpty()) {
                     System.out.println("Observation not on any path: " + snapsPerObservationTmp.get(observationsIndex).get(0).getQueryPoint());
                     anySnapNotOnAnyRoutedPath = true;
                 }
