@@ -56,6 +56,7 @@ public class RailwayMapMatching extends MapMatching {
     public MatchResult match_with_routing(List<Observation> observations, boolean ignoreErrors, int offset, StopWatch sw,
                                           List<Path> routedPaths) {
         this.offset = offset;
+        boolean usedDirectRouting = false;
         resetCounters(observations.size(), offset);
         List<Observation> observationSubList = observations.subList(offset, observations.size());
         List<Observation> filteredObservations = filterObservations(observationSubList);
@@ -129,10 +130,12 @@ public class RailwayMapMatching extends MapMatching {
                     routedPath = tmpRoutedPath;
                     snapsPerObservationOnRoutedPath.addAll(snapsPerObservationOnRoutedPathTmp);
                     System.out.println("All observations on the path #" + (finalRoutedPathsIndex + 1) + ": using direct routing for map matching");
+                    usedDirectRouting = true;
                     break;
                 }
             }
 
+            statistics.put("usedDirectRouting", usedDirectRouting);
             for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
                 List<Boolean> snapNotOnRoutedPath = snapsNotOnRoutedPaths.get(observationsIndex);
                 List<Snap> snaps = snapsPerObservationTmp.get(observationsIndex);
