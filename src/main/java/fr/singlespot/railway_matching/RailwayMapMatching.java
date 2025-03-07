@@ -36,8 +36,9 @@ public class RailwayMapMatching extends MapMatching {
      * @param sw           The stopwatch
      * @param routedPaths  The list of routed path between the first and last observation
      */
-    public MatchResult match_with_routing(List<Observation> observations, StopWatch sw, List<Path> routedPaths) {
-        return match_with_routing(observations, false, 0, sw, routedPaths);
+    public MatchResult match_with_routing(List<Observation> observations, StopWatch sw, List<Path> routedPaths,
+                                          boolean forceInitialRouting) {
+        return match_with_routing(observations, false, 0, sw, routedPaths, forceInitialRouting);
     }
 
     /**
@@ -54,7 +55,7 @@ public class RailwayMapMatching extends MapMatching {
      * @param routedPaths  The list of routed path between the first and last observation
      */
     public MatchResult match_with_routing(List<Observation> observations, boolean ignoreErrors, int offset, StopWatch sw,
-                                          List<Path> routedPaths) {
+                                          List<Path> routedPaths, boolean forceInitialRouting) {
         this.offset = offset;
         boolean usedDirectRouting = false;
         resetCounters(observations.size(), offset);
@@ -116,7 +117,7 @@ public class RailwayMapMatching extends MapMatching {
                             }
                         }
                     }
-                    if (!oneOfSnapsOnRoutedPath) {
+                    if (!oneOfSnapsOnRoutedPath && !forceInitialRouting) {
                         snapsNotOnRoutedPaths.get(snapsIndex).set(routedPathsIndex, true);
                     }
                 }

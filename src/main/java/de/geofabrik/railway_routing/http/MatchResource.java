@@ -351,7 +351,8 @@ public class MatchResource {
             @QueryParam("gps_accuracy") @DefaultValue("20") double gpsAccuracy,
             @QueryParam("max_processing_time") @DefaultValue("120") int maxProcessingTimeSeconds,
             @QueryParam("fill_gaps") @DefaultValue("false") boolean fillGaps,
-            @QueryParam("use_initial_routing") @DefaultValue("true") boolean useInitialRouting) throws Exception {
+            @QueryParam("use_initial_routing") @DefaultValue("true") boolean useInitialRouting,
+            @QueryParam("force_initial_routing") @DefaultValue("false") boolean forceInitialRouting) throws Exception {
 
         StopWatch sw = new StopWatch().start();
         boolean writeGPX = "gpx".equalsIgnoreCase(outType);
@@ -388,7 +389,7 @@ public class MatchResource {
             // route between first and last point
             List<GHPoint> routing_points = new ArrayList<GHPoint>();
             List<Path> routedPaths = new ArrayList<Path>(Collections.singletonList(null));
-            if (profile.equals("all_tracks") && useInitialRouting) {
+            if (profile.equals("all_tracks") && (useInitialRouting || forceInitialRouting)) {
                 GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
                 GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
                 routing_points.add(start_gh_point);
@@ -438,7 +439,8 @@ public class MatchResource {
                     matchResultsList.add(mr);
                     ++offset;
                 }
-                MatchResult matchResult = mapMatching.match_with_routing(inputGPXEntries, fillGaps, offset, sw, routedPaths);
+                MatchResult matchResult = mapMatching.match_with_routing(inputGPXEntries, fillGaps, offset, sw,
+                        routedPaths, forceInitialRouting);
                 weighting = matchResult.getWeighting();
                 if (offset < mapMatching.getProcessedPointsCount() - 1) {
                     matchResultsList.add(matchResult);
