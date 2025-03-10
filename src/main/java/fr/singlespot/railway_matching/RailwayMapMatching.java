@@ -147,7 +147,9 @@ public class RailwayMapMatching extends MapMatching {
                 List<Snap> snaps = snapsPerObservationTmp.get(observationsIndex);
                 if (snapNotOnRoutedPath.stream().allMatch(Boolean::booleanValue) && !snaps.isEmpty()) {
                     System.out.println("Observation not on any path: " + snapsPerObservationTmp.get(observationsIndex).get(0).getQueryPoint());
-                    anySnapNotOnAnyRoutedPath = true;
+                    if (!forceInitialRouting) {
+                        anySnapNotOnAnyRoutedPath = true;
+                    }
                 }
             }
         }
