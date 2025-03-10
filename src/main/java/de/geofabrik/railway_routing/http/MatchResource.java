@@ -509,6 +509,7 @@ public class MatchResource {
                 matchStatistics.put("time", matchMillis);
                 matchStatistics.put("original_distance", gpxEntriesLength);
                 matchStatistics.put("usedDirectRouting", mapMatching.getStatistics().get("usedDirectRouting"));
+                matchStatistics.put("forcedDirectRouting", mapMatching.getStatistics().get("forcedDirectRouting"));
                 map.putPOJO("map_matching", matchStatistics);
 
                 if (enableTraversalKeys) {

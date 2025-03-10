@@ -58,6 +58,7 @@ public class RailwayMapMatching extends MapMatching {
                                           List<Path> routedPaths, boolean forceInitialRouting) {
         this.offset = offset;
         boolean usedDirectRouting = false;
+        boolean forcedDirectRouting = false;
         resetCounters(observations.size(), offset);
         List<Observation> observationSubList = observations.subList(offset, observations.size());
         List<Observation> filteredObservations = filterObservations(observationSubList);
@@ -117,7 +118,7 @@ public class RailwayMapMatching extends MapMatching {
                             }
                         }
                     }
-                    if (!oneOfSnapsOnRoutedPath && !forceInitialRouting) {
+                    if (!oneOfSnapsOnRoutedPath) {
                         snapsNotOnRoutedPaths.get(snapsIndex).set(routedPathsIndex, true);
                     }
                 }
@@ -126,8 +127,11 @@ public class RailwayMapMatching extends MapMatching {
                     System.out.println("Path # " + (routedPathsIndex + 1) + ", all snaps on the first and last edges");
                 int finalRoutedPathsIndex = routedPathsIndex;
                 boolean allSnapsOnRoutedPath = snapsNotOnRoutedPaths.stream().noneMatch(snap -> snap.get(finalRoutedPathsIndex));
+                if (!allSnapsOnRoutedPath && forceInitialRouting) {
+                    forcedDirectRouting = true;
+                }
                 // We make sure that all observations are on the same path, and they are not all snapped on first and last segments unless there is only 2 observations
-                if (allSnapsOnRoutedPath && (pathEdgeIndices.size() > 2 || filteredObservations.size() == 2)) {
+                if ((allSnapsOnRoutedPath || forceInitialRouting) && (pathEdgeIndices.size() > 2 || filteredObservations.size() == 2)) {
                     routedPath = tmpRoutedPath;
                     snapsPerObservationOnRoutedPath.addAll(snapsPerObservationOnRoutedPathTmp);
                     System.out.println("All observations on the path #" + (finalRoutedPathsIndex + 1) + ": using direct routing for map matching");
@@ -137,6 +141,7 @@ public class RailwayMapMatching extends MapMatching {
             }
 
             statistics.put("usedDirectRouting", usedDirectRouting);
+            statistics.put("forcedDirectRouting", forcedDirectRouting);
             for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
                 List<Boolean> snapNotOnRoutedPath = snapsNotOnRoutedPaths.get(observationsIndex);
                 List<Snap> snaps = snapsPerObservationTmp.get(observationsIndex);
