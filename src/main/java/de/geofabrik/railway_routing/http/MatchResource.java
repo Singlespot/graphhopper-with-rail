@@ -287,9 +287,6 @@ public class MatchResource {
         // (base) query graph used to resolve headings, curbsides etc. this is not necessarily the same thing as
         // the (possibly implementation specific) query graph used by PathCalculator
         QueryGraph queryGraph = QueryGraph.create(hopper.getBaseGraph(), filteredSnapsList.stream().flatMap(Collection::stream).collect(Collectors.toList()));
-//        TODO if we want to implement alternate routes
-//        request.getHints().putObject("MAX_PATHS", 3);
-//        request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE);
         PathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
         boolean passThrough = false;
         boolean forceCurbsides = false;
@@ -306,8 +303,10 @@ public class MatchResource {
                 result = ViaRouting.calcPaths(request.getPoints(), queryGraph, new ArrayList<Snap>(Arrays.asList(firstSnap, secondSnap)),
                         solver.createDirectedEdgeFilter(), pathCalculator, request.getCurbsides(), forceCurbsides,
                         request.getHeadings(), passThrough);
-                if (result.paths.get(0).isFound() && result.paths.get(0).getDistance() > 0) {
-                    possiblePathsWithExtremities.add(new PathWithSnapExtremities(new RoutedPath(result.paths.get(0), queryGraph), firstSnap, secondSnap));
+                for (Path p : result.paths) {
+                    if (p.isFound() && p.getDistance() > 0) {
+                        possiblePathsWithExtremities.add(new PathWithSnapExtremities(new RoutedPath(p, queryGraph), firstSnap, secondSnap));
+                    }
                 }
             }
         }
@@ -402,6 +401,11 @@ public class MatchResource {
                         getHints().
                         putObject(CALC_POINTS, calcPoints).
                         putObject(INSTRUCTIONS, instructions);
+                //        TODO if we want to implement alternate routes
+                if (forceInitialRouting) {
+                    routing_request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE).
+                            getHints().putObject("MAX_PATHS", 3);
+                }
                 routedPaths = routeGap(routing_request, true).stream().map(rp -> rp.path).collect(Collectors.toList());
             }
 
