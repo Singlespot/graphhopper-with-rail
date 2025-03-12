@@ -3,12 +3,9 @@ package de.geofabrik.railway_routing.reader;
 import static com.graphhopper.util.Helper.nf;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
+import com.graphhopper.search.KVStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -189,11 +186,16 @@ public class OSMRailwayReader extends OSMReader {
         releaseRestrictionData();
     }
 
-    // In a custom OSMReader implementation
+    // Add SNCF ref
     @Override
-    protected boolean acceptWay(ReaderWay way) {
-        // Add your tag before processing
-        way.setTag("ref:FR:SNCF_Reseau", "full_ref");
-        return super.acceptWay(way);
+    protected void preprocessWay(ReaderWay way, WaySegmentParser.CoordinateSupplier coordinateSupplier,
+                                 WaySegmentParser.NodeTagSupplier nodeTagSupplier) {
+        super.preprocessWay(way, coordinateSupplier, nodeTagSupplier);
+        List<KVStorage.KeyValue> list = way.getTag("key_values", Collections.emptyList());
+        String refName =way.getTag("ref:FR:SNCF_Reseau");
+        list.add(new KVStorage.KeyValue("full_ref", refName));
+        way.setTag("key_values", list);
+
     }
+
 }

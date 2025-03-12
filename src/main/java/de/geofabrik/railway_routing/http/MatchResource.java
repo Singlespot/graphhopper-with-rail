@@ -63,6 +63,10 @@ import com.opencsv.bean.CsvToBeanBuilder;
 import de.geofabrik.railway_routing.InputCSVEntry;
 import de.geofabrik.railway_routing.RailwayHopper;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
 import static com.graphhopper.resources.RouteResource.removeLegacyParameters;
 import static com.graphhopper.util.Parameters.Routing.*;
 
@@ -81,9 +85,11 @@ public class MatchResource {
     // or have the lowest snap.getQueryDistance() for that street_name or street_ref
     private static class SnapListEdgesFilter {
         private final List<Snap> snapList;
+        private final RailwayHopper hopper;
 
-        private static Integer getSnapKey(Snap snap) {
+        private Integer getSnapKey(Snap snap) {
             String snapEdgeRefOrName = Stream.of(
+                            snap.getClosestEdge().get(hopper.getEncodingManager().getIntEncodedValue("osm_way_id")),
                             snap.getClosestEdge().getValue("full_ref"),
                             snap.getClosestEdge().getValue("street_ref"),
                             snap.getClosestEdge().getValue("street_name"))
@@ -95,7 +101,8 @@ public class MatchResource {
             return Objects.hash(snapEdgeRefOrName);
         }
 
-        public SnapListEdgesFilter(List<Snap> snapListInput) {
+        public SnapListEdgesFilter(List<Snap> snapListInput, RailwayHopper hopper) {
+            this.hopper = hopper;
             HashMap<Integer, Snap> snapMap = new HashMap<>();
             for (Snap snap : snapListInput) {
                 if (!Objects.equals(snap.getClosestEdge().getName(), "")
@@ -283,7 +290,7 @@ public class MatchResource {
             RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
             List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
             for (List<Snap> snapsTmp : snapsList) {
-                List<Snap> snapsTmpFiltered = new SnapListEdgesFilter(snapsTmp).getFilteredList();
+                List<Snap> snapsTmpFiltered = new SnapListEdgesFilter(snapsTmp, hopper).getFilteredList();
                 filteredSnapsList.add(snapsTmpFiltered);
             }
 
