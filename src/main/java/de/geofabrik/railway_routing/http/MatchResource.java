@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -82,7 +83,15 @@ public class MatchResource {
         private final List<Snap> snapList;
 
         private static Integer getSnapKey(Snap snap) {
-            String snapEdgeRefOrName = (String) (snap.getClosestEdge().getValue("street_ref") == null ? snap.getClosestEdge().getValue("street_name") : snap.getClosestEdge().getValue("street_ref"));
+            String snapEdgeRefOrName = Stream.of(
+                            snap.getClosestEdge().getValue("full_ref"),
+                            snap.getClosestEdge().getValue("street_ref"),
+                            snap.getClosestEdge().getValue("street_name"))
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .map(Object::toString)
+                    .orElse(null);
+
             return Objects.hash(snapEdgeRefOrName);
         }
 

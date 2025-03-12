@@ -75,12 +75,13 @@ public class OSMRailwayReader extends OSMReader {
      * supports multiple gauges.
      */
     protected void addEdge(int fromIndex, int toIndex, PointList pointList, ReaderWay way,
-            List<Map<String, Object>> nodeTags) {
+                           List<Map<String, Object>> nodeTags) {
         duplicateAndAddEdge(fromIndex, toIndex, pointList, way, nodeTags, super::addEdge);
     }
 
     /**
      * Read multiple string values from a OSM tag value separated by semicolons.
+     *
      * @param tagValue OSM tag value
      * @return List of read values or an empty list if nothing could be read.
      */
@@ -95,7 +96,7 @@ public class OSMRailwayReader extends OSMReader {
     }
 
     protected void duplicateAndAddEdge(int fromIndex, int toIndex, PointList pointList, ReaderWay way,
-            List<Map<String, Object>> nodeTags, AddEdgeCallback callback) {
+                                       List<Map<String, Object>> nodeTags, AddEdgeCallback callback) {
         String gauge = way.getTag("gauge");
         List<String> gauges = tagValueToList(gauge);
         String electrified = way.getTag("electrified");
@@ -136,8 +137,8 @@ public class OSMRailwayReader extends OSMReader {
                 if (voltages.size() == eleList.size() && frequencies.size() == eleList.size()) {
                     for (int i = 0; i < voltages.size(); ++i) {
                         callback.apply(fromIndex, toIndex, pointList.clone(false),
-                            duplicateWay(way, g, eleList.get(i), voltages.get(i), frequencies.get(i)),
-                            nodeTags);
+                                duplicateWay(way, g, eleList.get(i), voltages.get(i), frequencies.get(i)),
+                                nodeTags);
                     }
                 } else {
                     super.addEdge(fromIndex, toIndex, pointList.clone(false), duplicateWay(way, g, null, null, null), nodeTags);
@@ -166,16 +167,16 @@ public class OSMRailwayReader extends OSMReader {
             throw new IllegalStateException("BaseGraph must be initialize before we can read OSM");
 
         WaySegmentParser waySegmentParser = new WaySegmentParser.Builder(baseGraph.getNodeAccess(), baseGraph.getDirectory())
-        .setElevationProvider(eleProvider)
-        .setWayFilter(this::acceptWay)
-        .setSplitNodeFilter(this::isBarrierNode)
-        .setWayPreprocessor(this::preprocessWay)
-        .setRelationPreprocessor(this::preprocessRelations)
-        .setRelationProcessor(this::processRelation)
-        .setEdgeHandler(this::addEdge)
-        .setWorkerThreads(config.getWorkerThreads())
-        .registerPass2Handler(crossingsHandler)
-        .build();
+                .setElevationProvider(eleProvider)
+                .setWayFilter(this::acceptWay)
+                .setSplitNodeFilter(this::isBarrierNode)
+                .setWayPreprocessor(this::preprocessWay)
+                .setRelationPreprocessor(this::preprocessRelations)
+                .setRelationProcessor(this::processRelation)
+                .setEdgeHandler(this::addEdge)
+                .setWorkerThreads(config.getWorkerThreads())
+                .registerPass2Handler(crossingsHandler)
+                .build();
         waySegmentParser.readOSM(osmFile);
         osmDataDate = waySegmentParser.getTimeStamp();
         if (baseGraph.getNodes() == 0)
@@ -186,5 +187,13 @@ public class OSMRailwayReader extends OSMReader {
         applyTurnCostsAtSwitches();
         addRestrictionsToGraph();
         releaseRestrictionData();
+    }
+
+    // In a custom OSMReader implementation
+    @Override
+    protected boolean acceptWay(ReaderWay way) {
+        // Add your tag before processing
+        way.setTag("ref:FR:SNCF_Reseau", "full_ref");
+        return super.acceptWay(way);
     }
 }
