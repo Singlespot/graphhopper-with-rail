@@ -108,7 +108,7 @@ graphhopper:
   #           hazmat,hazmat_tunnel,hazmat_water,lanes,osm_way_id,toll,track_type,mtb_rating,hike_rating,horse_rating,
   #           country,curvature,average_slope,max_slope,car_temporal_access,bike_temporal_access,foot_temporal_access
   # For railway routing, the encoded values rail_access and rail_average_speed must be mentioned.
-  graph.encoded_values: car_access, car_average_speed, foot_access, hike_rating, foot_priority, foot_average_speed, average_slope, bike_priority, bike_access, roundabout, bike_average_speed, osm_way_id, foot_network,gauge,voltage,electrified,frequency,road_environment,max_speed,rail_access,rail_average_speed,railway_class,railway_service,preferred_direction
+  graph.encoded_values: car_access, car_average_speed, road_access, foot_access, hike_rating, foot_priority, foot_average_speed, average_slope, bike_priority, bike_access, roundabout, bike_average_speed, osm_way_id, foot_network,gauge,voltage,electrified,frequency,road_environment,max_speed,rail_access,rail_average_speed,railway_class,railway_service,preferred_direction
 
   #### Speed, hybrid and flexible mode ####
 
