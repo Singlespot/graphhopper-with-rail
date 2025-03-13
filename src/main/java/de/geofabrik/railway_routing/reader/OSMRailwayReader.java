@@ -192,10 +192,11 @@ public class OSMRailwayReader extends OSMReader {
                                  WaySegmentParser.NodeTagSupplier nodeTagSupplier) {
         super.preprocessWay(way, coordinateSupplier, nodeTagSupplier);
         List<KVStorage.KeyValue> list = way.getTag("key_values", Collections.emptyList());
-        String refName =way.getTag("ref:FR:SNCF_Reseau");
-        list.add(new KVStorage.KeyValue("full_ref", refName));
-        way.setTag("key_values", list);
-
+        String refName = way.getTag("ref:FR:SNCF_Reseau");
+        if (refName != null) {
+            list.add(new KVStorage.KeyValue("full_ref", refName));
+            way.setTag("key_values", list);
+        }
     }
 
 }
