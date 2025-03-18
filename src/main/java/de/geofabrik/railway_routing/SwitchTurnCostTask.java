@@ -47,7 +47,13 @@ public class SwitchTurnCostTask {
         List<RestrictionTagParser> restrictionTagParsers = osmParsers.getRestrictionTagParsers();
         for (RestrictionTagParser parser : restrictionTagParsers) {
             BooleanEncodedValue turnCostEnc = parser.getTurnRestrictionEnc();
-            if (forbidden) {
+            String encodedValueName = turnCostEnc.getName();
+            String vehicleType = null;
+            // Extract the vehicle type from the encoded value name
+            if (encodedValueName.endsWith("_turn_restriction")) {
+                vehicleType = encodedValueName.substring(0, encodedValueName.length() - "_turn_restriction".length());
+            }
+            if (isRelevantProfile(vehicleType) && forbidden) {
                 tcs.set(turnCostEnc, fromEdge, viaNode, toEdge, true);
                 tcs.set(turnCostEnc, toEdge, viaNode, fromEdge, true);
             }
@@ -96,5 +102,14 @@ public class SwitchTurnCostTask {
             EdgeIterator iter = explorer.setBaseNode(start);
             handleSwitch(iter, start);
         }
+    }
+
+    private boolean isRelevantProfile(String vehicleType) {
+        // Define which profiles should have turn costs applied
+        return vehicleType != null &&
+                (vehicleType.equals("train") ||
+                        vehicleType.equals("tram") ||
+                        vehicleType.equals("light_rail") ||
+                        vehicleType.equals("subway"));
     }
 }
