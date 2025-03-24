@@ -46,14 +46,11 @@ public class SwitchTurnCostTask {
         forbidden |= (angleDiff < 0.75 * Math.PI || angleDiff > 1.25 * Math.PI);
         List<RestrictionTagParser> restrictionTagParsers = osmParsers.getRestrictionTagParsers();
         for (RestrictionTagParser parser : restrictionTagParsers) {
+
             BooleanEncodedValue turnCostEnc = parser.getTurnRestrictionEnc();
-            String encodedValueName = turnCostEnc.getName();
-            String vehicleType = null;
-            // Extract the vehicle type from the encoded value name
-            if (encodedValueName.endsWith("_turn_restriction")) {
-                vehicleType = encodedValueName.substring(0, encodedValueName.length() - "_turn_restriction".length());
-            }
-            if (isRelevantProfile(vehicleType) && forbidden) {
+            List<String> vehicleTypes = parser.getVehicleTypes();
+
+            if (isRelevantProfile(vehicleTypes) && forbidden) {
                 tcs.set(turnCostEnc, fromEdge, viaNode, toEdge, true);
                 tcs.set(turnCostEnc, toEdge, viaNode, fromEdge, true);
             }
@@ -104,12 +101,17 @@ public class SwitchTurnCostTask {
         }
     }
 
-    private boolean isRelevantProfile(String vehicleType) {
+    private boolean isRelevantProfile(List<String> vehicleTypes) {
         // Define which profiles should have turn costs applied
-        return vehicleType != null &&
-                (vehicleType.equals("train") ||
-                        vehicleType.equals("tram") ||
-                        vehicleType.equals("light_rail") ||
-                        vehicleType.equals("subway"));
+        for (String vehicleType : vehicleTypes) {
+            // if vehicle type is not in the list (train, tram, light_rail), return false
+            if (!vehicleType.equals("train") &&
+                    !vehicleType.equals("tram") &&
+                    !vehicleType.equals("light_rail") &&
+                    !vehicleType.equals("subway")) {
+                return false;
+            }
+        }
+        return true;
     }
 }
