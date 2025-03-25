@@ -6,7 +6,7 @@
 //      custom_model_files: [anytrack.json]
 
 {
-  "distance_influence": 0,
+  "distance_influence": 100,
   "priority": [
     { "if": "!rail_access", "multiply_by": "0" }
   ],

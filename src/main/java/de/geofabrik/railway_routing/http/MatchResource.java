@@ -420,7 +420,7 @@ public class MatchResource {
                 //        TODO if we want to implement alternate routes
                 if (forceInitialRouting) {
                     routing_request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE).
-                            getHints().putObject("MAX_PATHS", 3);
+                            getHints().putObject("MAX_PATHS", 5);
                 }
                 routedPaths = routeGap(routing_request, true).stream().map(rp -> rp.path).collect(Collectors.toList());
             }
