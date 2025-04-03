@@ -422,7 +422,9 @@ public class MatchResource {
                     routing_request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE).
                             getHints().putObject("MAX_PATHS", 5);
                 }
+                System.out.println("Routing between " + start_gh_point + " and " + end_gh_point);
                 routedPaths = routeGap(routing_request, true).stream().map(rp -> rp.path).collect(Collectors.toList());
+                System.out.println("Found " + routedPaths.size() + " initial routes");
             }
 
             // Offset from start of the input points
