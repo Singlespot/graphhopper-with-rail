@@ -65,10 +65,9 @@ public class RailwayMapMatching extends MapMatching {
         statistics.put("filteredObservations", filteredObservations.size());
 
         // Snap observations to links. Generates multiple candidate snaps per observation.
-        List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream()
-                .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy))
-                .collect(Collectors.toList());
-        queryGraph = QueryGraph.create(graph, snapsPerObservationTmp.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+        java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy);
+        // Will generate snapsPerObservationTmp inside analyzer
+        queryGraph = null; // Will set after analysis
 
         MatchResult result;
         List<SequenceState<State, Observation, Path>> seq;
@@ -77,15 +76,21 @@ public class RailwayMapMatching extends MapMatching {
         List<List<Snap>> snapsPerObservationOnRoutedPath = new ArrayList<>();
 // Check if there is at least one valid routed path
         if (routedPaths.get(0) != null && routedPaths.stream().anyMatch(Path::isFound)) {
-            // Initialize a list to track which snaps are not on each routed path
-            List<List<Boolean>> snapsNotOnRoutedPaths = IntStream.range(0, snapsPerObservationTmp.size())
-                    .mapToObj(i -> IntStream.range(0, routedPaths.size()).mapToObj(j -> false).collect(Collectors.toList()))
-                    .collect(Collectors.toList());
-            // Initialize a list to store edge indices for each routed path
-            List<Set<Integer>> routedPathsPathEdgeIndices = IntStream.range(0, routedPaths.size()).mapToObj(i -> new HashSet<Integer>()).collect(Collectors.toList());
+            SnappedPointsAnalyzer analyzer = new SnappedPointsAnalyzer();
+            SnappedPointsAnalyzer.AnalysisResult analysisResult = analyzer.analyze(
+                    routedPaths,
+                    filteredObservations,
+                    findCandidateSnaps,
+                    this::resolveToRealEdge
+            );
+            int[] snapsOnPathCounts = analysisResult.snapsOnPathCounts;
+            List<List<Boolean>> snapsNotOnRoutedPaths = analysisResult.snapsNotOnRoutedPaths;
+            List<Set<Integer>> routedPathsPathEdgeIndices = analysisResult.routedPathsPathEdgeIndices;
+            List<List<List<Snap>>> snapsPerObservationOnRoutedPathTmpList = analysisResult.snapsPerObservationOnRoutedPathTmpList;
 
-            // Array to store snap counts for each path
-            int[] snapsOnPathCounts = new int[routedPaths.size()];
+            // Now set queryGraph using the generated snapsPerObservationTmp
+            List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream().map(findCandidateSnaps).collect(Collectors.toList());
+            queryGraph = QueryGraph.create(graph, snapsPerObservationTmp.stream().flatMap(Collection::stream).collect(Collectors.toList()));
 
             // Variables to track the path with the most snaps (for forceInitialRouting)
             int maxSnapsCount = -1;
@@ -111,49 +116,7 @@ public class RailwayMapMatching extends MapMatching {
                 int maxEdgeIndex = -1;
 
                 // Counter for snaps on this path
-                int snapsOnPathCount = 0;
-
-                // Check each observation to see if it's on the current routed path
-                for (int snapsIndex = 0, snapsPerObservationTmpSize = snapsPerObservationTmp.size(); snapsIndex < snapsPerObservationTmpSize; snapsIndex++) {
-                    // Get all snaps for this observation
-                    List<Snap> snaps = snapsPerObservationTmp.get(snapsIndex);
-                    // Flag to track if any snap from this observation is on the path
-                    boolean oneOfSnapsOnRoutedPath = false;
-                    // Check each snap in this observation
-                    for (Snap snap : snaps) {
-                        // If we already found a snap on the path, skip the rest
-                        if (oneOfSnapsOnRoutedPath) break;
-                        // Check each edge in the path
-                        for (int edgeIndex = 0; edgeIndex < pathEdges.size(); edgeIndex++) {
-                            EdgeIteratorState e = pathEdges.get(edgeIndex);
-                            // Get the actual edge from the path
-                            EdgeIteratorState pathEdge = resolveToRealEdge(e);
-                            // Get the edge the snap is on
-                            EdgeIteratorState snapEdge = snap.getClosestEdge();
-                            // If the snap is on this path edge
-                            if (pathEdge.getEdge() == snapEdge.getEdge()) {
-                                // Add this snap to the list of snaps on the path
-                                if (edgeIndex > maxEdgeIndex || snapsIndex == snapsPerObservationTmpSize - 1) {
-                                    snapsPerObservationOnRoutedPathTmp.add(Collections.singletonList(snap));
-                                    maxEdgeIndex = edgeIndex;
-                                    pathEdgeIndices.add(edgeIndex);
-                                }
-                                // Mark that we found a snap on the path
-                                oneOfSnapsOnRoutedPath = true;
-                                // Increment the counter for snaps on this path
-                                snapsOnPathCount++;
-                                break;
-                            }
-                        }
-                    }
-                    // If no snap from this observation is on the path, mark it
-                    if (!oneOfSnapsOnRoutedPath) {
-                        snapsNotOnRoutedPaths.get(snapsIndex).set(routedPathsIndex, true);
-                    }
-                }
-
-                // Store the snap count for this path
-                snapsOnPathCounts[routedPathsIndex] = snapsOnPathCount;
+                int snapsOnPathCount = snapsOnPathCounts[routedPathsIndex];
 
                 // Debug output about the path
                 System.out.println("Path #" + (routedPathsIndex + 1) + ": " + snapsOnPathCount + " snaps out of " +
@@ -174,7 +137,7 @@ public class RailwayMapMatching extends MapMatching {
                     maxSnapsCount = snapsOnPathCount;
                     bestPathIndex = routedPathsIndex;
                     bestPath = tmpRoutedPath;
-                    bestPathSnaps = new ArrayList<>(snapsPerObservationOnRoutedPathTmp);
+                    bestPathSnaps = new ArrayList<>(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
                 }
 
                 // If not all snaps are on the path but forcing is enabled, set forced routing flag
@@ -187,7 +150,7 @@ public class RailwayMapMatching extends MapMatching {
                 if (allSnapsOnRoutedPath && !forceInitialRouting &&
                         (pathEdgeIndices.size() > 2 || filteredObservations.size() == 2)) {
                     routedPath = tmpRoutedPath;
-                    snapsPerObservationOnRoutedPath.addAll(snapsPerObservationOnRoutedPathTmp);
+                    snapsPerObservationOnRoutedPath.addAll(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
                     System.out.println("All observations on the path #" + (finalRoutedPathsIndex + 1) + ": using direct routing for map matching");
                     usedDirectRouting = true;
                     break;

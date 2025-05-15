@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+
 import static com.graphhopper.resources.RouteResource.removeLegacyParameters;
 import static com.graphhopper.util.Parameters.Routing.*;
 
@@ -418,9 +419,11 @@ public class MatchResource {
                         putObject(CALC_POINTS, calcPoints).
                         putObject(INSTRUCTIONS, instructions);
                 //        TODO if we want to implement alternate routes
-                if (forceInitialRouting) {
+                if (true) {
                     routing_request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE).
-                            getHints().putObject("MAX_PATHS", 5);
+                            getHints().
+                            putObject("alternative_route.max_paths", 8).
+                            putObject("alternative_route.max_share_factor", 1);
                 }
                 System.out.println("Routing between " + start_gh_point + " and " + end_gh_point);
                 routedPaths = routeGap(routing_request, true).stream().map(rp -> rp.path).collect(Collectors.toList());
