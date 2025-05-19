@@ -1,6 +1,8 @@
 package fr.singlespot.railway_matching;
 
 import com.graphhopper.routing.Path;
+import com.graphhopper.routing.querygraph.QueryGraph;
+import com.graphhopper.storage.BaseGraph;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.matching.Observation;
 import com.graphhopper.storage.index.Snap;

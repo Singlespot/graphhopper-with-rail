@@ -66,8 +66,10 @@ public class RailwayMapMatching extends MapMatching {
 
         // Snap observations to links. Generates multiple candidate snaps per observation.
         java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy);
-        // Will generate snapsPerObservationTmp inside analyzer
-        queryGraph = null; // Will set after analysis
+        List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream()
+                .map(findCandidateSnaps)
+                .collect(Collectors.toList());
+        queryGraph = QueryGraph.create(graph, snapsPerObservationTmp.stream().flatMap(Collection::stream).collect(Collectors.toList()));
 
         MatchResult result;
         List<SequenceState<State, Observation, Path>> seq;
@@ -87,10 +89,6 @@ public class RailwayMapMatching extends MapMatching {
             List<List<Boolean>> snapsNotOnRoutedPaths = analysisResult.snapsNotOnRoutedPaths;
             List<Set<Integer>> routedPathsPathEdgeIndices = analysisResult.routedPathsPathEdgeIndices;
             List<List<List<Snap>>> snapsPerObservationOnRoutedPathTmpList = analysisResult.snapsPerObservationOnRoutedPathTmpList;
-
-            // Now set queryGraph using the generated snapsPerObservationTmp
-            List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream().map(findCandidateSnaps).collect(Collectors.toList());
-            queryGraph = QueryGraph.create(graph, snapsPerObservationTmp.stream().flatMap(Collection::stream).collect(Collectors.toList()));
 
             // Variables to track the path with the most snaps (for forceInitialRouting)
             int maxSnapsCount = -1;
