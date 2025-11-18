@@ -8,46 +8,27 @@ package de.geofabrik.railway_routing.http;
 
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.util.StdDateFormat;
-import java.util.List;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-
-import javax.inject.Inject;
-
-import org.glassfish.hk2.api.Factory;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
-
 import com.graphhopper.GraphHopper;
 import com.graphhopper.GraphHopperConfig;
-import com.graphhopper.http.GHJerseyViolationExceptionMapper;
-import com.graphhopper.http.GHRequestTransformer;
+import com.graphhopper.http.*;
 import com.graphhopper.http.IllegalArgumentExceptionMapper;
-//import com.graphhopper.http.LegacyProfileResolver;
-import com.graphhopper.http.MultiExceptionGPXMessageBodyWriter;
-import com.graphhopper.http.MultiExceptionMapper;
-import com.graphhopper.http.TypeGPXFilter;
 import com.graphhopper.http.health.GraphHopperHealthCheck;
 import com.graphhopper.jackson.Jackson;
-import com.graphhopper.resources.HealthCheckResource;
-import com.graphhopper.resources.I18NResource;
-import com.graphhopper.resources.InfoResource;
-import com.graphhopper.resources.IsochroneResource;
-import com.graphhopper.resources.MVTResource;
-import com.graphhopper.resources.MapMatchingResource;
-import com.graphhopper.resources.NearestResource;
-import com.graphhopper.resources.RouteResource;
-import com.graphhopper.resources.SPTResource;
-import com.graphhopper.http.ProfileResolver;
+import com.graphhopper.resources.*;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.BaseGraph;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.util.Parameters;
 import com.graphhopper.util.TranslationMap;
 import com.graphhopper.util.details.PathDetailsBuilderFactory;
-
 import de.geofabrik.railway_routing.RailwayHopper;
-import io.dropwizard.ConfiguredBundle;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.ConfiguredBundle;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
+import jakarta.inject.Inject;
+import org.glassfish.hk2.api.Factory;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 
 
 public class RailwayRoutingBundle implements ConfiguredBundle<RailwayRoutingServerConfiguration> {

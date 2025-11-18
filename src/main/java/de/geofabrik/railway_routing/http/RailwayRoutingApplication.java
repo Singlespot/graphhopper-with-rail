@@ -6,16 +6,15 @@
 
 package de.geofabrik.railway_routing.http;
 
-import java.util.EnumSet;
-import javax.servlet.DispatcherType;
-
 import com.graphhopper.application.resources.RootResource;
 import com.graphhopper.http.CORSFilter;
-
-import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.Application;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
+import jakarta.servlet.DispatcherType;
+
+import java.util.EnumSet;
 
 public final class RailwayRoutingApplication extends Application<RailwayRoutingServerConfiguration> {
 
