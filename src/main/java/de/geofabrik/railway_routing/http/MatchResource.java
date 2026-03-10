@@ -289,7 +289,7 @@ public class MatchResource {
             String profile = profileResolver.resolveProfile(profileResolverHints);
             hints.putObject("profile", profile);
             RailwayMapMatching mapMatching = RailwayMapMatching.fromGraphHopper(hopper, hints);
-            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy)).collect(Collectors.toList());
+            List<List<Snap>> snapsList = request.getPoints().stream().map(p -> mapMatching.findCandidateSnaps(p.lat, p.lon, p.accuracy, p.index, p.timestamp)).collect(Collectors.toList());
             for (List<Snap> snapsTmp : snapsList) {
                 List<Snap> snapsTmpFiltered = new SnapListEdgesFilter(snapsTmp, hopper).getFilteredList();
                 filteredSnapsList.add(snapsTmpFiltered);

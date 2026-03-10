@@ -65,7 +65,7 @@ public class RailwayMapMatching extends MapMatching {
         statistics.put("filteredObservations", filteredObservations.size());
 
         // Snap observations to links. Generates multiple candidate snaps per observation.
-        java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy);
+        java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy, o.getPoint().index, o.getPoint().timestamp);
         List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream()
                 .map(findCandidateSnaps)
                 .collect(Collectors.toList());
@@ -190,7 +190,7 @@ public class RailwayMapMatching extends MapMatching {
             // Creates candidates from the Snaps of all observations (a candidate is basically a
             // Snap + direction). We need to put lower the accuracy to a max value of 300
             List<List<Snap>> snapsPerObservation = filteredObservations.stream()
-                    .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.min(o.getPoint().accuracy, 300.0)))
+                    .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.min(o.getPoint().accuracy, 300.0),o.getPoint().index, o.getPoint().timestamp))
                     .collect(Collectors.toList());
             statistics.put("snapsPerObservation", snapsPerObservation.stream().mapToInt(Collection::size).toArray());
 
