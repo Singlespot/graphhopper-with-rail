@@ -90,7 +90,7 @@ public class RailwayMapMatching extends MapMatching {
             List<Set<Integer>> routedPathsPathEdgeIndices = analysisResult.routedPathsPathEdgeIndices;
             List<List<List<Snap>>> snapsPerObservationOnRoutedPathTmpList = analysisResult.snapsPerObservationOnRoutedPathTmpList;
 
-            // Variables to track the path with the most snaps (for forceInitialRouting)
+            // Variables to track the path with the most snaps
             int maxSnapsCount = -1;
             int bestPathIndex = -1;
             Path bestPath = null;
@@ -129,8 +129,8 @@ public class RailwayMapMatching extends MapMatching {
                 // Check if all snaps are on this routed path
                 boolean allSnapsOnRoutedPath = snapsNotOnRoutedPaths.stream().noneMatch(snap -> snap.get(finalRoutedPathsIndex));
 
-                // If we're forcing routing, track the path with the most snaps
-                if (forceInitialRouting && snapsOnPathCount > maxSnapsCount &&
+                // Track the path with the most snaps (used for both forcing and via-waypoint routing)
+                if (snapsOnPathCount > maxSnapsCount &&
                         (pathEdgeIndices.size() > 2 || filteredObservations.size() == 2)) {
                     maxSnapsCount = snapsOnPathCount;
                     bestPathIndex = routedPathsIndex;
@@ -175,6 +175,7 @@ public class RailwayMapMatching extends MapMatching {
             }
             statistics.put("usedDirectRouting", usedDirectRouting);
             statistics.put("forcedDirectRouting", forcedDirectRouting);
+            List<Integer> observationsNotOnAnyPathIndices = new ArrayList<>();
             for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
                 List<Boolean> snapNotOnRoutedPath = snapsNotOnRoutedPaths.get(observationsIndex);
                 List<Snap> snaps = snapsPerObservationTmp.get(observationsIndex);
@@ -182,7 +183,232 @@ public class RailwayMapMatching extends MapMatching {
                     System.out.println("Observation not on any path: " + snapsPerObservationTmp.get(observationsIndex).get(0).getQueryPoint());
                     if (!forceInitialRouting) {
                         anySnapNotOnAnyRoutedPath = true;
+                        observationsNotOnAnyPathIndices.add(observationsIndex);
                     }
+                }
+            }
+
+            // When not forcing and some snaps are not on any path, try routing via the off-path points
+            if (anySnapNotOnAnyRoutedPath && bestPath != null && !forceInitialRouting) {
+                System.out.println("Attempting via-waypoint routing through " + observationsNotOnAnyPathIndices.size() +
+                        " off-path observations using best path #" + (bestPathIndex + 1));
+
+                // Build set for quick lookup
+                Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnAnyPathIndices);
+                int totalObs = filteredObservations.size();
+
+                // Identify contiguous off-path segments with their on-path anchors
+                // Each segment is: [lastOnPathBefore, offPath1, offPath2, ..., firstOnPathAfter]
+                List<List<Integer>> offPathSegments = new ArrayList<>();
+                List<Integer> currentSegment = null;
+                for (int idx : observationsNotOnAnyPathIndices) {
+                    if (currentSegment == null || idx != currentSegment.get(currentSegment.size() - 1) + 1) {
+                        // Start a new segment
+                        if (currentSegment != null) {
+                            offPathSegments.add(currentSegment);
+                        }
+                        currentSegment = new ArrayList<>();
+                    }
+                    currentSegment.add(idx);
+                }
+                if (currentSegment != null) {
+                    offPathSegments.add(currentSegment);
+                }
+
+                System.out.println("Via-waypoint routing: found " + offPathSegments.size() + " contiguous off-path segment(s)");
+                for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
+                    List<Integer> seg = offPathSegments.get(segNum);
+                    int anchorBefore = seg.get(0) - 1;
+                    int anchorAfter = seg.get(seg.size() - 1) + 1;
+                    System.out.println("  Segment " + segNum + ": off-path obs " + seg.get(0) + "-" + seg.get(seg.size() - 1) +
+                            " (anchor before: obs " + (anchorBefore >= 0 ? anchorBefore : "NONE") +
+                            ", anchor after: obs " + (anchorAfter < totalObs ? anchorAfter : "NONE") + ")");
+                }
+
+                // Collect snaps for all waypoints across all segments (for building the QueryGraph)
+                List<Snap> allSegmentSnaps = new ArrayList<>();
+                // Build waypoint lists for each segment: [anchorBefore, offPath1, ..., offPathN, anchorAfter]
+                List<List<Integer>> segmentWaypointIndices = new ArrayList<>();
+                boolean allWaypointsHaveSnaps = true;
+
+                for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
+                    List<Integer> seg = offPathSegments.get(segNum);
+                    List<Integer> waypoints = new ArrayList<>();
+
+                    // Add anchor before (last on-path obs before segment)
+                    int anchorBefore = seg.get(0) - 1;
+                    if (anchorBefore >= 0) {
+                        waypoints.add(anchorBefore);
+                    } else {
+                        // First observation is off-path, use it as its own start
+                        System.out.println("  Segment " + segNum + ": no on-path anchor before, first obs is off-path");
+                    }
+
+                    // Add all off-path observations in this segment
+                    waypoints.addAll(seg);
+
+                    // Add anchor after (first on-path obs after segment)
+                    int anchorAfter = seg.get(seg.size() - 1) + 1;
+                    if (anchorAfter < totalObs) {
+                        waypoints.add(anchorAfter);
+                    } else {
+                        // Last observation is off-path, use it as its own end
+                        System.out.println("  Segment " + segNum + ": no on-path anchor after, last obs is off-path");
+                    }
+
+                    segmentWaypointIndices.add(waypoints);
+                }
+
+                // Snap all waypoint observations
+                Map<Integer, Snap> waypointSnapMap = new LinkedHashMap<>();
+                for (List<Integer> waypoints : segmentWaypointIndices) {
+                    for (int obsIdx : waypoints) {
+                        if (waypointSnapMap.containsKey(obsIdx)) continue;
+                        Observation obs = filteredObservations.get(obsIdx);
+                        List<Snap> candidateSnaps = findCandidateSnaps(obs.getPoint().lat, obs.getPoint().lon,
+                                Math.min(obs.getPoint().accuracy, 300.0), obs.getPoint().index, obs.getPoint().timestamp);
+                        if (candidateSnaps.isEmpty()) {
+                            System.out.println("  Obs " + obsIdx + ": NO SNAPS at " +
+                                    obs.getPoint().lat + "," + obs.getPoint().lon +
+                                    " - aborting via-waypoint routing");
+                            allWaypointsHaveSnaps = false;
+                            break;
+                        }
+                        Snap closestSnap = candidateSnaps.get(0);
+                        waypointSnapMap.put(obsIdx, closestSnap);
+                        allSegmentSnaps.add(closestSnap);
+                        System.out.println("  Obs " + obsIdx + (offPathSet.contains(obsIdx) ? " [OFF-PATH]" : " [ON-PATH anchor]") +
+                                ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
+                                " -> snapped to node " + closestSnap.getClosestNode() +
+                                " at " + closestSnap.getSnappedPoint().lat + "," + closestSnap.getSnappedPoint().lon +
+                                " on edge " + closestSnap.getClosestEdge().getEdge() +
+                                " (name=" + closestSnap.getClosestEdge().getName() + ")" +
+                                " dist=" + String.format("%.1f", closestSnap.getQueryDistance()) + "m" +
+                                " (" + candidateSnaps.size() + " candidates)");
+                    }
+                    if (!allWaypointsHaveSnaps) break;
+                }
+
+                if (allWaypointsHaveSnaps) {
+                    // Build a query graph for all waypoint snaps
+                    QueryGraph waypointQueryGraph = QueryGraph.create(graph, allSegmentSnaps);
+
+                    // Route each segment and collect edges
+                    List<EdgeIteratorState> allRoutedEdges = new ArrayList<>();
+                    boolean allSegmentsRouted = true;
+                    double totalRoutedDistance = 0;
+
+                    for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
+                        List<Integer> waypoints = segmentWaypointIndices.get(segNum);
+                        System.out.println("Via-waypoint routing segment " + segNum + ": routing through " +
+                                waypoints.size() + " waypoints (obs indices: " +
+                                waypoints.stream().map(String::valueOf).collect(Collectors.joining(" -> ")) + ")");
+
+                        for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
+                            int fromObsIdx = waypoints.get(wpIdx);
+                            int toObsIdx = waypoints.get(wpIdx + 1);
+                            Snap fromSnap = waypointSnapMap.get(fromObsIdx);
+                            Snap toSnap = waypointSnapMap.get(toObsIdx);
+                            int fromNode = fromSnap.getClosestNode();
+                            int toNode = toSnap.getClosestNode();
+
+                            System.out.println("  Leg " + wpIdx + ": obs " + fromObsIdx +
+                                    " (node " + fromNode +
+                                    " at " + fromSnap.getSnappedPoint().lat + "," + fromSnap.getSnappedPoint().lon +
+                                    ", edge " + fromSnap.getClosestEdge().getEdge() +
+                                    " '" + fromSnap.getClosestEdge().getName() + "')" +
+                                    " -> obs " + toObsIdx +
+                                    " (node " + toNode +
+                                    " at " + toSnap.getSnappedPoint().lat + "," + toSnap.getSnappedPoint().lon +
+                                    ", edge " + toSnap.getClosestEdge().getEdge() +
+                                    " '" + toSnap.getClosestEdge().getName() + "')");
+
+                            List<Path> legPaths = router.calcPaths(waypointQueryGraph, fromNode, toNode,
+                                    new int[]{fromNode}, new int[]{toNode});
+                            if (legPaths.isEmpty() || !legPaths.get(0).isFound()) {
+                                System.out.println("    -> FAILED: no path found");
+                                allSegmentsRouted = false;
+                                break;
+                            }
+                            Path legPath = legPaths.get(0);
+                            List<EdgeIteratorState> legEdges = legPath.calcEdges();
+                            allRoutedEdges.addAll(legEdges);
+                            totalRoutedDistance += legPath.getDistance();
+                            System.out.println("    -> OK: " + legEdges.size() + " edges, distance=" +
+                                    String.format("%.1f", legPath.getDistance()) + "m, time=" + legPath.getTime() + "ms");
+                        }
+                        if (!allSegmentsRouted) break;
+                    }
+
+                    if (allSegmentsRouted && !allRoutedEdges.isEmpty()) {
+                        // Merge: best path edges + routed segment edges
+                        Set<Integer> mergedEdgeIds = new LinkedHashSet<>();
+
+                        // Add best path edges
+                        List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
+                        for (EdgeIteratorState e : bestPathEdges) {
+                            mergedEdgeIds.add(resolveToRealEdge(e).getEdge());
+                        }
+                        int bestPathEdgeCount = mergedEdgeIds.size();
+
+                        // Add routed segment edges
+                        for (EdgeIteratorState e : allRoutedEdges) {
+                            mergedEdgeIds.add(resolveToRealEdge(e).getEdge());
+                        }
+                        int routedEdgeCount = mergedEdgeIds.size() - bestPathEdgeCount;
+
+                        System.out.println("Via-waypoint routing: merged edges = " + mergedEdgeIds.size() +
+                                " (best path: " + bestPathEdgeCount + " + routed segments: " + routedEdgeCount + ")" +
+                                ", total routed distance=" + String.format("%.1f", totalRoutedDistance) + "m");
+
+                        // Check if all observations now snap to the merged edge set
+                        List<List<Snap>> viaSnapsPerObservation = new ArrayList<>();
+                        boolean allOnMergedPath = true;
+                        int missedCount = 0;
+                        for (int obsIdx = 0; obsIdx < snapsPerObservationTmp.size(); obsIdx++) {
+                            List<Snap> snaps = snapsPerObservationTmp.get(obsIdx);
+                            boolean found = false;
+                            for (Snap snap : snaps) {
+                                if (mergedEdgeIds.contains(snap.getClosestEdge().getEdge())) {
+                                    viaSnapsPerObservation.add(Collections.singletonList(snap));
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                missedCount++;
+                                Observation missedObs = filteredObservations.get(obsIdx);
+                                System.out.println("  Observation " + obsIdx + " NOT on merged path at " +
+                                        missedObs.getPoint().lat + "," + missedObs.getPoint().lon +
+                                        " (snaps on edges: " + snaps.stream().map(s ->
+                                        s.getClosestEdge().getEdge() + " at " + s.getSnappedPoint().lat + "," + s.getSnappedPoint().lon)
+                                        .collect(Collectors.joining("; ")) + ")");
+                                allOnMergedPath = false;
+                            }
+                        }
+
+                        if (allOnMergedPath) {
+                            System.out.println("Via-waypoint routing: ALL " + snapsPerObservationTmp.size() +
+                                    " observations on merged path, using it for direct routing");
+                            snapsPerObservationOnRoutedPath.clear();
+                            snapsPerObservationOnRoutedPath.addAll(viaSnapsPerObservation);
+                            usedDirectRouting = true;
+                            anySnapNotOnAnyRoutedPath = false;
+                            routedPath = bestPath;
+                            statistics.put("usedDirectRouting", true);
+                            statistics.put("usedViaWaypointRouting", true);
+                        } else {
+                            System.out.println("Via-waypoint routing: " + missedCount + " observations not on merged path, " +
+                                    "falling back to default matching");
+                            statistics.put("usedViaWaypointRouting", false);
+                        }
+                    } else {
+                        System.out.println("Via-waypoint routing: could not route all segments, falling back to default matching");
+                        statistics.put("usedViaWaypointRouting", false);
+                    }
+                } else {
+                    System.out.println("Via-waypoint routing: some waypoints have no snaps, falling back to default matching");
+                    statistics.put("usedViaWaypointRouting", false);
                 }
             }
         }
