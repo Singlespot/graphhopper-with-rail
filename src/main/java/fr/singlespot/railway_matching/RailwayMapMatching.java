@@ -342,16 +342,19 @@ public class RailwayMapMatching extends MapMatching {
                         for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
                             int fromObsIdx = waypoints.get(wpIdx);
                             int toObsIdx = waypoints.get(wpIdx + 1);
+                            // Limit to top 3 closest snap candidates to avoid combinatorial explosion
                             List<Snap> fromCandidates = waypointAllSnapsMap.get(fromObsIdx);
                             List<Snap> toCandidates = waypointAllSnapsMap.get(toObsIdx);
+                            int maxCandidates = 3;
+                            if (fromCandidates.size() > maxCandidates) fromCandidates = fromCandidates.subList(0, maxCandidates);
+                            if (toCandidates.size() > maxCandidates) toCandidates = toCandidates.subList(0, maxCandidates);
 
                             System.out.println("  Leg " + wpIdx + ": obs " + fromCandidates.get(0).getQueryPoint().index +
                                     " (" + fromCandidates.size() + " snap candidates)" +
                                     " -> obs " + toCandidates.get(0).getQueryPoint().index +
                                     " (" + toCandidates.size() + " snap candidates)");
 
-                            // Try all from-snap × to-snap combinations and pick shortest path
-                            // This handles cases where closest snap is on wrong parallel track
+                            // Try from-snap × to-snap combinations and pick shortest path
                             Path bestLegPath = null;
                             Snap bestFromSnap = null;
                             Snap bestToSnap = null;
@@ -360,40 +363,19 @@ public class RailwayMapMatching extends MapMatching {
                                 for (Snap toSnap : toCandidates) {
                                     int toNode = toSnap.getClosestNode();
                                     if (fromNode == toNode) continue;
-
-                                    // Also try all directed edge combinations at virtual nodes
-                                    List<Integer> fromEdges = new ArrayList<>();
-                                    List<Integer> toEdges = new ArrayList<>();
-                                    if (waypointQueryGraph.isVirtualNode(fromNode)) {
-                                        EdgeIterator iter = waypointQueryGraph.createEdgeExplorer().setBaseNode(fromNode);
-                                        while (iter.next()) fromEdges.add(iter.getEdge());
-                                    } else {
-                                        fromEdges.add(EdgeIterator.ANY_EDGE);
-                                    }
-                                    if (waypointQueryGraph.isVirtualNode(toNode)) {
-                                        EdgeIterator iter = waypointQueryGraph.createEdgeExplorer().setBaseNode(toNode);
-                                        while (iter.next()) toEdges.add(iter.getEdge());
-                                    } else {
-                                        toEdges.add(EdgeIterator.ANY_EDGE);
-                                    }
-
-                                    for (int fEdge : fromEdges) {
-                                        for (int tEdge : toEdges) {
-                                            try {
-                                                List<Path> legPaths = router.calcPaths(waypointQueryGraph, fromNode, fEdge,
-                                                        new int[]{toNode}, new int[]{tEdge});
-                                                if (!legPaths.isEmpty() && legPaths.get(0).isFound()) {
-                                                    Path candidate = legPaths.get(0);
-                                                    if (bestLegPath == null || candidate.getDistance() < bestLegPath.getDistance()) {
-                                                        bestLegPath = candidate;
-                                                        bestFromSnap = fromSnap;
-                                                        bestToSnap = toSnap;
-                                                    }
-                                                }
-                                            } catch (Exception e) {
-                                                // Skip failed combinations
+                                    try {
+                                        List<Path> legPaths = router.calcPaths(waypointQueryGraph, fromNode, EdgeIterator.ANY_EDGE,
+                                                new int[]{toNode}, new int[]{EdgeIterator.ANY_EDGE});
+                                        if (!legPaths.isEmpty() && legPaths.get(0).isFound()) {
+                                            Path candidate = legPaths.get(0);
+                                            if (bestLegPath == null || candidate.getDistance() < bestLegPath.getDistance()) {
+                                                bestLegPath = candidate;
+                                                bestFromSnap = fromSnap;
+                                                bestToSnap = toSnap;
                                             }
                                         }
+                                    } catch (Exception e) {
+                                        // Skip failed combinations
                                     }
                                 }
                             }
@@ -424,21 +406,29 @@ public class RailwayMapMatching extends MapMatching {
                         // which causes massive loops. Instead, we already have the correct
                         // path from the routing — just package it as a MatchResult.
 
+                        // Build merged path: bestPath edges with routed segments
+                        // REPLACING (not supplementing) the bestPath section between
+                        // each pair of anchors. The routed segments go through the
+                        // off-path observations: anchor→offPath1→...→offPathN→anchor.
                         List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
 
-                        // Build a map: real edge ID -> bestPath edge index (for anchor lookup)
-                        Map<Integer, Integer> bestPathEdgeIdToIndex = new HashMap<>();
+                        // Build a map: real edge ID -> first bestPath edge index
+                        Map<Integer, Integer> bestPathEdgeIdToIndex = new LinkedHashMap<>();
                         for (int bpIdx = 0; bpIdx < bestPathEdges.size(); bpIdx++) {
-                            bestPathEdgeIdToIndex.put(resolveToRealEdge(bestPathEdges.get(bpIdx)).getEdge(), bpIdx);
+                            int edgeId = resolveToRealEdge(bestPathEdges.get(bpIdx)).getEdge();
+                            if (!bestPathEdgeIdToIndex.containsKey(edgeId)) {
+                                bestPathEdgeIdToIndex.put(edgeId, bpIdx);
+                            }
                         }
 
-                        // For each off-path segment, find where to splice into bestPath
+                        // Find anchor bestPath indices for each segment
                         List<int[]> segmentAnchorBpIndices = new ArrayList<>();
                         for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
                             List<Integer> waypoints = segmentWaypointIndices.get(segNum);
                             int anchorBeforeObsIdx = waypoints.get(0);
                             int anchorAfterObsIdx = waypoints.get(waypoints.size() - 1);
 
+                            // Find bestPath index of anchor-before's edge
                             int anchorBeforeBpIdx = -1;
                             if (!offPathSet.contains(anchorBeforeObsIdx)) {
                                 for (Snap snap : snapsPerObservationTmp.get(anchorBeforeObsIdx)) {
@@ -446,6 +436,7 @@ public class RailwayMapMatching extends MapMatching {
                                     if (bpIdx != null) { anchorBeforeBpIdx = bpIdx; break; }
                                 }
                             }
+                            // Find bestPath index of anchor-after's edge
                             int anchorAfterBpIdx = bestPathEdges.size();
                             if (!offPathSet.contains(anchorAfterObsIdx)) {
                                 for (Snap snap : snapsPerObservationTmp.get(anchorAfterObsIdx)) {
@@ -454,49 +445,38 @@ public class RailwayMapMatching extends MapMatching {
                                 }
                             }
                             segmentAnchorBpIndices.add(new int[]{anchorBeforeBpIdx, anchorAfterBpIdx});
+                            System.out.println("  Segment " + segNum + " anchors: bestPath[" +
+                                    anchorBeforeBpIdx + "] -> bestPath[" + anchorAfterBpIdx + "]" +
+                                    ", routed edges: " + perSegmentRoutedEdges.get(segNum).size());
                         }
 
-                        // Build spliced ordered edge list: bestPath edges with detour
-                        // segments inserted at the correct anchor positions
+                        // Build merged path by replacing bestPath sections with routed segments
                         List<EdgeIteratorState> mergedPath = new ArrayList<>();
-                        Set<Integer> seenEdgeIds = new HashSet<>();
                         int bpCursor = 0;
                         for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
                             int[] anchors = segmentAnchorBpIndices.get(segNum);
 
-                            // Add bestPath edges up to and including anchor-before
-                            while (bpCursor <= anchors[0] && bpCursor < bestPathEdges.size()) {
+                            // Add bestPath edges up to (but NOT including) anchor-before
+                            // The routed segment starts from the anchor-before node
+                            while (bpCursor < anchors[0] && bpCursor < bestPathEdges.size()) {
                                 mergedPath.add(bestPathEdges.get(bpCursor));
-                                seenEdgeIds.add(resolveToRealEdge(bestPathEdges.get(bpCursor)).getEdge());
                                 bpCursor++;
                             }
 
-                            // Insert detour segment edges (skip duplicates)
-                            for (EdgeIteratorState e : perSegmentRoutedEdges.get(segNum)) {
-                                if (seenEdgeIds.add(resolveToRealEdge(e).getEdge())) {
-                                    mergedPath.add(e);
-                                }
-                            }
+                            // Insert ALL routed segment edges (anchor→offpath→...→anchor)
+                            mergedPath.addAll(perSegmentRoutedEdges.get(segNum));
 
-                            // Advance past bestPath edges that overlap with detour
-                            while (bpCursor < anchors[1] && bpCursor < bestPathEdges.size()) {
-                                if (seenEdgeIds.add(resolveToRealEdge(bestPathEdges.get(bpCursor)).getEdge())) {
-                                    mergedPath.add(bestPathEdges.get(bpCursor));
-                                }
-                                bpCursor++;
-                            }
+                            // Skip bestPath edges between anchors (replaced by routed segment)
+                            bpCursor = Math.max(bpCursor, anchors[1]);
                         }
-                        // Add remaining bestPath edges
+                        // Add remaining bestPath edges after last segment
                         while (bpCursor < bestPathEdges.size()) {
-                            if (seenEdgeIds.add(resolveToRealEdge(bestPathEdges.get(bpCursor)).getEdge())) {
-                                mergedPath.add(bestPathEdges.get(bpCursor));
-                            }
+                            mergedPath.add(bestPathEdges.get(bpCursor));
                             bpCursor++;
                         }
 
-                        System.out.println("Via-waypoint routing: built merged path with " +
-                                mergedPath.size() + " edges (bestPath: " + bestPathEdges.size() +
-                                " + routed segments), total routed distance=" +
+                        System.out.println("Via-waypoint routing: using bestPath directly with " +
+                                mergedPath.size() + " edges, total routed distance=" +
                                 String.format("%.1f", totalRoutedDistance) + "m");
 
                         // Build EdgeMatch list directly from merged path edges
