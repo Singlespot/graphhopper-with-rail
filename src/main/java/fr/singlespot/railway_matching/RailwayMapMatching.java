@@ -150,6 +150,26 @@ public class RailwayMapMatching extends MapMatching {
                     routedPath = tmpRoutedPath;
                     snapsPerObservationOnRoutedPath.addAll(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
                     System.out.println("All observations on the path #" + (finalRoutedPathsIndex + 1) + ": using direct routing for map matching");
+                    
+                    // Print selected path as GeoJSON for direct routing
+                    if (tmpRoutedPath.isFound()) {
+                        PointList pathPoints = tmpRoutedPath.calcPoints();
+                        StringBuilder geoJson = new StringBuilder();
+                        geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                        for (int i = 0; i < pathPoints.size(); i++) {
+                            if (i > 0) geoJson.append(",");
+                            geoJson.append("[").append(pathPoints.getLon(i)).append(",").append(pathPoints.getLat(i)).append("]");
+                        }
+                        geoJson.append("]},\"properties\":{\"stroke\":\"#0000ff\",\"path_index\":")
+                                .append(finalRoutedPathsIndex)
+                                .append(",\"distance\":")
+                                .append(tmpRoutedPath.getDistance())
+                                .append(",\"snaps\":")
+                                .append(snapsOnPathCount)
+                                .append(",\"selected\":true,\"direct_routing\":true}}");
+                        System.out.println("SelectedPath GeoJSON (direct): " + geoJson);
+                    }
+                    
                     usedDirectRouting = true;
                     break;
                 }
@@ -161,6 +181,25 @@ public class RailwayMapMatching extends MapMatching {
                 snapsPerObservationOnRoutedPath.addAll(bestPathSnaps);
                 System.out.println("Forced routing - SELECTED path #" + (bestPathIndex + 1) + " with " + maxSnapsCount +
                         " snaps out of " + snapsPerObservationTmp.size() + " for map matching");
+
+                // Print bestPath as GeoJSON
+                if (bestPath.isFound()) {
+                    PointList bestPathPoints = bestPath.calcPoints();
+                    StringBuilder geoJson = new StringBuilder();
+                    geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                    for (int i = 0; i < bestPathPoints.size(); i++) {
+                        if (i > 0) geoJson.append(",");
+                        geoJson.append("[").append(bestPathPoints.getLon(i)).append(",").append(bestPathPoints.getLat(i)).append("]");
+                    }
+                    geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_index\":")
+                            .append(bestPathIndex)
+                            .append(",\"distance\":")
+                            .append(bestPath.getDistance())
+                            .append(",\"snaps\":")
+                            .append(maxSnapsCount)
+                            .append(",\"selected\":true}}");
+                    System.out.println("BestPath GeoJSON: " + geoJson);
+                }
 
                 // Print summary of all path snap counts for comparison
                 System.out.println("Path snap counts summary:");
@@ -190,18 +229,27 @@ public class RailwayMapMatching extends MapMatching {
 
             // When not forcing and some snaps are not on any path, try routing via the off-path points
             if (anySnapNotOnAnyRoutedPath && bestPath != null && !forceInitialRouting) {
-                System.out.println("Attempting via-waypoint routing through " + observationsNotOnAnyPathIndices.size() +
-                        " off-path observations using best path #" + (bestPathIndex + 1));
+                // Rebuild off-path indices relative to the BEST path (not "any path")
+                // so that anchors are guaranteed to be on the best path
+                List<Integer> observationsNotOnBestPathIndices = new ArrayList<>();
+                for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
+                    if (snapsNotOnRoutedPaths.get(observationsIndex).get(bestPathIndex)) {
+                        observationsNotOnBestPathIndices.add(observationsIndex);
+                    }
+                }
+                System.out.println("Attempting via-waypoint routing through " + observationsNotOnBestPathIndices.size() +
+                        " off-path observations (relative to best path #" + (bestPathIndex + 1) + ")" +
+                        " (was " + observationsNotOnAnyPathIndices.size() + " off all paths)");
 
                 // Build set for quick lookup
-                Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnAnyPathIndices);
+                Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnBestPathIndices);
                 int totalObs = filteredObservations.size();
 
                 // Identify contiguous off-path segments with their on-path anchors
                 // Each segment is: [lastOnPathBefore, offPath1, offPath2, ..., firstOnPathAfter]
                 List<List<Integer>> offPathSegments = new ArrayList<>();
                 List<Integer> currentSegment = null;
-                for (int idx : observationsNotOnAnyPathIndices) {
+                for (int idx : observationsNotOnBestPathIndices) {
                     if (currentSegment == null || idx != currentSegment.get(currentSegment.size() - 1) + 1) {
                         // Start a new segment
                         if (currentSegment != null) {
@@ -220,9 +268,9 @@ public class RailwayMapMatching extends MapMatching {
                     List<Integer> seg = offPathSegments.get(segNum);
                     int anchorBefore = seg.get(0) - 1;
                     int anchorAfter = seg.get(seg.size() - 1) + 1;
-                    System.out.println("  Segment " + segNum + ": off-path obs " + seg.get(0) + "-" + seg.get(seg.size() - 1) +
-                            " (anchor before: obs " + (anchorBefore >= 0 ? anchorBefore : "NONE") +
-                            ", anchor after: obs " + (anchorAfter < totalObs ? anchorAfter : "NONE") + ")");
+                    System.out.println("  Segment " + segNum + ": off-path obs " + filteredObservations.get(seg.get(0)).getPoint().index + "-" + filteredObservations.get(seg.get(seg.size() - 1)).getPoint().index +
+                            " (anchor before: obs " + (anchorBefore >= 0 ? filteredObservations.get(anchorBefore).getPoint().index : "NONE") +
+                            ", anchor after: obs " + (anchorAfter < totalObs ? filteredObservations.get(anchorAfter).getPoint().index : "NONE") + ")");
                 }
 
                 // Collect snaps for all waypoints across all segments (for building the QueryGraph)
@@ -268,7 +316,7 @@ public class RailwayMapMatching extends MapMatching {
                         List<Snap> candidateSnaps = findCandidateSnaps(obs.getPoint().lat, obs.getPoint().lon,
                                 Math.min(obs.getPoint().accuracy, 300.0), obs.getPoint().index, obs.getPoint().timestamp);
                         if (candidateSnaps.isEmpty()) {
-                            System.out.println("  Obs " + obsIdx + ": NO SNAPS at " +
+                            System.out.println("  Obs " + obs.getPoint().index + ": NO SNAPS at " +
                                     obs.getPoint().lat + "," + obs.getPoint().lon +
                                     " - aborting via-waypoint routing");
                             allWaypointsHaveSnaps = false;
@@ -277,7 +325,7 @@ public class RailwayMapMatching extends MapMatching {
                         Snap closestSnap = candidateSnaps.get(0);
                         waypointSnapMap.put(obsIdx, closestSnap);
                         allSegmentSnaps.add(closestSnap);
-                        System.out.println("  Obs " + obsIdx + (offPathSet.contains(obsIdx) ? " [OFF-PATH]" : " [ON-PATH anchor]") +
+                        System.out.println("  Obs " + obs.getPoint().index + (offPathSet.contains(obsIdx) ? " [OFF-PATH]" : " [ON-PATH anchor]") +
                                 ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
                                 " -> snapped to node " + closestSnap.getClosestNode() +
                                 " at " + closestSnap.getSnappedPoint().lat + "," + closestSnap.getSnappedPoint().lon +
@@ -300,9 +348,13 @@ public class RailwayMapMatching extends MapMatching {
 
                     for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
                         List<Integer> waypoints = segmentWaypointIndices.get(segNum);
+                        StringBuilder wpDesc = new StringBuilder();
+                        for (int wi = 0; wi < waypoints.size(); wi++) {
+                            if (wi > 0) wpDesc.append(" -> ");
+                            wpDesc.append(filteredObservations.get(waypoints.get(wi)).getPoint().index);
+                        }
                         System.out.println("Via-waypoint routing segment " + segNum + ": routing through " +
-                                waypoints.size() + " waypoints (obs indices: " +
-                                waypoints.stream().map(String::valueOf).collect(Collectors.joining(" -> ")) + ")");
+                                waypoints.size() + " waypoints (obs indices: " + wpDesc + ")");
 
                         for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
                             int fromObsIdx = waypoints.get(wpIdx);
@@ -312,12 +364,12 @@ public class RailwayMapMatching extends MapMatching {
                             int fromNode = fromSnap.getClosestNode();
                             int toNode = toSnap.getClosestNode();
 
-                            System.out.println("  Leg " + wpIdx + ": obs " + fromObsIdx +
+                            System.out.println("  Leg " + wpIdx + ": obs " + fromSnap.getQueryPoint().index +
                                     " (node " + fromNode +
                                     " at " + fromSnap.getSnappedPoint().lat + "," + fromSnap.getSnappedPoint().lon +
                                     ", edge " + fromSnap.getClosestEdge().getEdge() +
                                     " '" + fromSnap.getClosestEdge().getName() + "')" +
-                                    " -> obs " + toObsIdx +
+                                    " -> obs " + toSnap.getQueryPoint().index +
                                     " (node " + toNode +
                                     " at " + toSnap.getSnappedPoint().lat + "," + toSnap.getSnappedPoint().lon +
                                     ", edge " + toSnap.getClosestEdge().getEdge() +
@@ -378,7 +430,7 @@ public class RailwayMapMatching extends MapMatching {
                             if (!found) {
                                 missedCount++;
                                 Observation missedObs = filteredObservations.get(obsIdx);
-                                System.out.println("  Observation " + obsIdx + " NOT on merged path at " +
+                                System.out.println("  Observation " + missedObs.getPoint().index + " NOT on merged path at " +
                                         missedObs.getPoint().lat + "," + missedObs.getPoint().lon +
                                         " (snaps on edges: " + snaps.stream().map(s ->
                                         s.getClosestEdge().getEdge() + " at " + s.getSnappedPoint().lat + "," + s.getSnappedPoint().lon)
@@ -395,6 +447,26 @@ public class RailwayMapMatching extends MapMatching {
                             usedDirectRouting = true;
                             anySnapNotOnAnyRoutedPath = false;
                             routedPath = bestPath;
+                            
+                            // Print bestPath as GeoJSON for via-waypoint routing
+                            if (bestPath != null && bestPath.isFound()) {
+                                PointList bestPathPoints = bestPath.calcPoints();
+                                StringBuilder geoJson = new StringBuilder();
+                                geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                                for (int i = 0; i < bestPathPoints.size(); i++) {
+                                    if (i > 0) geoJson.append(",");
+                                    geoJson.append("[").append(bestPathPoints.getLon(i)).append(",").append(bestPathPoints.getLat(i)).append("]");
+                                }
+                                geoJson.append("]},\"properties\":{\"stroke\":\"#00ff00\",\"path_index\":")
+                                        .append(bestPathIndex)
+                                        .append(",\"distance\":")
+                                        .append(bestPath.getDistance())
+                                        .append(",\"snaps\":")
+                                        .append(maxSnapsCount)
+                                        .append(",\"selected\":true,\"via_waypoint\":true}}");
+                                System.out.println("BestPath GeoJSON (via-waypoint): " + geoJson);
+                            }
+                            
                             statistics.put("usedDirectRouting", true);
                             statistics.put("usedViaWaypointRouting", true);
                         } else {

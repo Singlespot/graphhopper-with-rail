@@ -328,30 +328,7 @@ public class MatchResource {
                 }
             }
         }
-        // Print all paths as a GeoJSON FeatureCollection with distinct stroke colors
-        String[] colors = {"#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990"};
-        StringBuilder fc = new StringBuilder();
-        fc.append("{\"type\":\"FeatureCollection\",\"features\":[");
-        for (int pi = 0; pi < possiblePathsWithExtremities.size(); pi++) {
-            Path pp = possiblePathsWithExtremities.get(pi).path.path;
-            PointList pl = pp.calcPoints();
-            if (pi > 0) fc.append(",");
-            fc.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
-            for (int i = 0; i < pl.size(); i++) {
-                if (i > 0) fc.append(",");
-                fc.append("[").append(pl.getLon(i)).append(",").append(pl.getLat(i)).append("]");
-            }
-            fc.append("]},\"properties\":{\"stroke\":\"")
-                    .append(colors[pi % colors.length])
-                    .append("\",\"path_index\":")
-                    .append(pi)
-                    .append(",\"distance\":")
-                    .append(pp.getDistance())
-                    .append("}}");
-        }
-        fc.append("]}");
-        System.out.println("Paths GeoJSON: " + fc);
-
+        
         if (possiblePathsWithExtremities.isEmpty()) {
             System.out.println("No path found");
             return Collections.singletonList(new RoutedPath(null, null));
@@ -359,6 +336,31 @@ public class MatchResource {
             List<RoutedPath> possiblePaths;
 //            We want the shortest path possible for the snaps that are closest to their observations
             possiblePathsWithExtremities.sort(Comparator.comparingDouble(pwe -> (pwe.startSnap.getQueryDistance() + pwe.endSnap.getQueryDistance() + 1e-10) * pwe.path.path.getDistance()));
+            
+            // Print all paths as a GeoJSON FeatureCollection with distinct stroke colors
+            String[] colors = {"#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990"};
+            StringBuilder fc = new StringBuilder();
+            fc.append("{\"type\":\"FeatureCollection\",\"features\":[");
+            for (int pi = 0; pi < possiblePathsWithExtremities.size(); pi++) {
+                Path pp = possiblePathsWithExtremities.get(pi).path.path;
+                PointList pl = pp.calcPoints();
+                if (pi > 0) fc.append(",");
+                fc.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                for (int i = 0; i < pl.size(); i++) {
+                    if (i > 0) fc.append(",");
+                    fc.append("[").append(pl.getLon(i)).append(",").append(pl.getLat(i)).append("]");
+                }
+                fc.append("]},\"properties\":{\"stroke\":\"")
+                        .append(colors[pi % colors.length])
+                        .append("\",\"path_index\":")
+                        .append(pi)
+                        .append(",\"distance\":")
+                        .append(pp.getDistance())
+                        .append("}}");
+            }
+            fc.append("]}");
+            System.out.println("Paths GeoJSON: " + fc);
+            
             possiblePaths = possiblePathsWithExtremities.stream().map(pwe -> pwe.path).collect(Collectors.toList());
             return possiblePaths;
         }
