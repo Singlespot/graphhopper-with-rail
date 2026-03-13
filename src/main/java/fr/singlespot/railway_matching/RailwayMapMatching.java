@@ -8,6 +8,7 @@ import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.BaseGraph;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.storage.index.Snap;
+import com.graphhopper.routing.querygraph.VirtualEdgeIteratorState;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 
@@ -59,13 +60,14 @@ public class RailwayMapMatching extends MapMatching {
         this.offset = offset;
         boolean usedDirectRouting = false;
         boolean forcedDirectRouting = false;
+        Set<Integer> mergedPathEdgeKeys = new HashSet<>();
         resetCounters(observations.size(), offset);
         List<Observation> observationSubList = observations.subList(offset, observations.size());
         List<Observation> filteredObservations = filterObservations(observationSubList);
         statistics.put("filteredObservations", filteredObservations.size());
 
         // Snap observations to links. Generates multiple candidate snaps per observation.
-        java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, o.getPoint().accuracy, o.getPoint().index, o.getPoint().timestamp);
+        java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.max(20, o.getPoint().accuracy), o.getPoint().index, o.getPoint().timestamp);
         List<List<Snap>> snapsPerObservationTmp = filteredObservations.stream()
                 .map(findCandidateSnaps)
                 .collect(Collectors.toList());
@@ -150,56 +152,34 @@ public class RailwayMapMatching extends MapMatching {
                     routedPath = tmpRoutedPath;
                     snapsPerObservationOnRoutedPath.addAll(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
                     System.out.println("All observations on the path #" + (finalRoutedPathsIndex + 1) + ": using direct routing for map matching");
-                    
-                    // Print selected path as GeoJSON for direct routing
-                    if (tmpRoutedPath.isFound()) {
-                        PointList pathPoints = tmpRoutedPath.calcPoints();
-                        StringBuilder geoJson = new StringBuilder();
-                        geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
-                        for (int i = 0; i < pathPoints.size(); i++) {
-                            if (i > 0) geoJson.append(",");
-                            geoJson.append("[").append(pathPoints.getLon(i)).append(",").append(pathPoints.getLat(i)).append("]");
-                        }
-                        geoJson.append("]},\"properties\":{\"stroke\":\"#0000ff\",\"path_index\":")
-                                .append(finalRoutedPathsIndex)
-                                .append(",\"distance\":")
-                                .append(tmpRoutedPath.getDistance())
-                                .append(",\"snaps\":")
-                                .append(snapsOnPathCount)
-                                .append(",\"selected\":true,\"direct_routing\":true}}");
-                        System.out.println("SelectedPath GeoJSON (direct): " + geoJson);
-                    }
-                    
                     usedDirectRouting = true;
                     break;
                 }
             }
-
+// Print selected path as GeoJSON for direct routing
+            if (bestPath.isFound()) {
+                PointList pathPoints = bestPath.calcPoints();
+                StringBuilder geoJson = new StringBuilder();
+                geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                for (int i = 0; i < pathPoints.size(); i++) {
+                    if (i > 0) geoJson.append(",");
+                    geoJson.append("[").append(pathPoints.getLon(i)).append(",").append(pathPoints.getLat(i)).append("]");
+                }
+                geoJson.append("]},\"properties\":{\"stroke\":\"#0000ff\",\"path_index\":")
+                        .append(bestPathIndex)
+                        .append(",\"distance\":")
+                        .append(bestPath.getDistance())
+                        .append(",\"snaps\":")
+                        .append(bestPathSnaps.size())
+                        .append(",\"selected\":true,\"direct_routing\":true}}");
+//                System.out.println("BestPath GeoJSON (direct): " + geoJson);
+            }
             // If forcing routing and we found a best path, use it
             if (forceInitialRouting && bestPath != null) {
                 routedPath = bestPath;
                 snapsPerObservationOnRoutedPath.addAll(bestPathSnaps);
                 System.out.println("Forced routing - SELECTED path #" + (bestPathIndex + 1) + " with " + maxSnapsCount +
                         " snaps out of " + snapsPerObservationTmp.size() + " for map matching");
-
-                // Print bestPath as GeoJSON
-                if (bestPath.isFound()) {
-                    PointList bestPathPoints = bestPath.calcPoints();
-                    StringBuilder geoJson = new StringBuilder();
-                    geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
-                    for (int i = 0; i < bestPathPoints.size(); i++) {
-                        if (i > 0) geoJson.append(",");
-                        geoJson.append("[").append(bestPathPoints.getLon(i)).append(",").append(bestPathPoints.getLat(i)).append("]");
-                    }
-                    geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_index\":")
-                            .append(bestPathIndex)
-                            .append(",\"distance\":")
-                            .append(bestPath.getDistance())
-                            .append(",\"snaps\":")
-                            .append(maxSnapsCount)
-                            .append(",\"selected\":true}}");
-                    System.out.println("BestPath GeoJSON: " + geoJson);
-                }
 
                 // Print summary of all path snap counts for comparison
                 System.out.println("Path snap counts summary:");
@@ -238,7 +218,7 @@ public class RailwayMapMatching extends MapMatching {
                     }
                 }
                 System.out.println("Attempting via-waypoint routing through " + observationsNotOnBestPathIndices.size() +
-                        " off-path observations (relative to best path #" + (bestPathIndex + 1) + ")" +
+                        " off-path observations (relative to best path #" + (bestPathIndex) + ")" +
                         " (was " + observationsNotOnAnyPathIndices.size() + " off all paths)");
 
                 // Build set for quick lookup
@@ -307,14 +287,14 @@ public class RailwayMapMatching extends MapMatching {
                     segmentWaypointIndices.add(waypoints);
                 }
 
-                // Snap all waypoint observations
-                Map<Integer, Snap> waypointSnapMap = new LinkedHashMap<>();
+                // Snap all waypoint observations - store ALL candidates per observation
+                Map<Integer, List<Snap>> waypointAllSnapsMap = new LinkedHashMap<>();
                 for (List<Integer> waypoints : segmentWaypointIndices) {
                     for (int obsIdx : waypoints) {
-                        if (waypointSnapMap.containsKey(obsIdx)) continue;
+                        if (waypointAllSnapsMap.containsKey(obsIdx)) continue;
                         Observation obs = filteredObservations.get(obsIdx);
                         List<Snap> candidateSnaps = findCandidateSnaps(obs.getPoint().lat, obs.getPoint().lon,
-                                Math.min(obs.getPoint().accuracy, 300.0), obs.getPoint().index, obs.getPoint().timestamp);
+                                Math.min(Math.max(20,obs.getPoint().accuracy), 300.0), obs.getPoint().index, obs.getPoint().timestamp);
                         if (candidateSnaps.isEmpty()) {
                             System.out.println("  Obs " + obs.getPoint().index + ": NO SNAPS at " +
                                     obs.getPoint().lat + "," + obs.getPoint().lon +
@@ -322,9 +302,9 @@ public class RailwayMapMatching extends MapMatching {
                             allWaypointsHaveSnaps = false;
                             break;
                         }
+                        waypointAllSnapsMap.put(obsIdx, candidateSnaps);
+                        allSegmentSnaps.addAll(candidateSnaps);
                         Snap closestSnap = candidateSnaps.get(0);
-                        waypointSnapMap.put(obsIdx, closestSnap);
-                        allSegmentSnaps.add(closestSnap);
                         System.out.println("  Obs " + obs.getPoint().index + (offPathSet.contains(obsIdx) ? " [OFF-PATH]" : " [ON-PATH anchor]") +
                                 ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
                                 " -> snapped to node " + closestSnap.getClosestNode() +
@@ -343,11 +323,14 @@ public class RailwayMapMatching extends MapMatching {
 
                     // Route each segment and collect edges
                     List<EdgeIteratorState> allRoutedEdges = new ArrayList<>();
+                    // Track edges per segment for building the spliced ordered edge list
+                    List<List<EdgeIteratorState>> perSegmentRoutedEdges = new ArrayList<>();
                     boolean allSegmentsRouted = true;
                     double totalRoutedDistance = 0;
 
                     for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
                         List<Integer> waypoints = segmentWaypointIndices.get(segNum);
+                        List<EdgeIteratorState> segmentEdges = new ArrayList<>();
                         StringBuilder wpDesc = new StringBuilder();
                         for (int wi = 0; wi < waypoints.size(); wi++) {
                             if (wi > 0) wpDesc.append(" -> ");
@@ -359,121 +342,206 @@ public class RailwayMapMatching extends MapMatching {
                         for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
                             int fromObsIdx = waypoints.get(wpIdx);
                             int toObsIdx = waypoints.get(wpIdx + 1);
-                            Snap fromSnap = waypointSnapMap.get(fromObsIdx);
-                            Snap toSnap = waypointSnapMap.get(toObsIdx);
-                            int fromNode = fromSnap.getClosestNode();
-                            int toNode = toSnap.getClosestNode();
+                            List<Snap> fromCandidates = waypointAllSnapsMap.get(fromObsIdx);
+                            List<Snap> toCandidates = waypointAllSnapsMap.get(toObsIdx);
 
-                            System.out.println("  Leg " + wpIdx + ": obs " + fromSnap.getQueryPoint().index +
-                                    " (node " + fromNode +
-                                    " at " + fromSnap.getSnappedPoint().lat + "," + fromSnap.getSnappedPoint().lon +
-                                    ", edge " + fromSnap.getClosestEdge().getEdge() +
-                                    " '" + fromSnap.getClosestEdge().getName() + "')" +
-                                    " -> obs " + toSnap.getQueryPoint().index +
-                                    " (node " + toNode +
-                                    " at " + toSnap.getSnappedPoint().lat + "," + toSnap.getSnappedPoint().lon +
-                                    ", edge " + toSnap.getClosestEdge().getEdge() +
-                                    " '" + toSnap.getClosestEdge().getName() + "')");
+                            System.out.println("  Leg " + wpIdx + ": obs " + fromCandidates.get(0).getQueryPoint().index +
+                                    " (" + fromCandidates.size() + " snap candidates)" +
+                                    " -> obs " + toCandidates.get(0).getQueryPoint().index +
+                                    " (" + toCandidates.size() + " snap candidates)");
 
-                            List<Path> legPaths = router.calcPaths(waypointQueryGraph, fromNode, toNode,
-                                    new int[]{fromNode}, new int[]{toNode});
-                            if (legPaths.isEmpty() || !legPaths.get(0).isFound()) {
-                                System.out.println("    -> FAILED: no path found");
+                            // Try all from-snap × to-snap combinations and pick shortest path
+                            // This handles cases where closest snap is on wrong parallel track
+                            Path bestLegPath = null;
+                            Snap bestFromSnap = null;
+                            Snap bestToSnap = null;
+                            for (Snap fromSnap : fromCandidates) {
+                                int fromNode = fromSnap.getClosestNode();
+                                for (Snap toSnap : toCandidates) {
+                                    int toNode = toSnap.getClosestNode();
+                                    if (fromNode == toNode) continue;
+
+                                    // Also try all directed edge combinations at virtual nodes
+                                    List<Integer> fromEdges = new ArrayList<>();
+                                    List<Integer> toEdges = new ArrayList<>();
+                                    if (waypointQueryGraph.isVirtualNode(fromNode)) {
+                                        EdgeIterator iter = waypointQueryGraph.createEdgeExplorer().setBaseNode(fromNode);
+                                        while (iter.next()) fromEdges.add(iter.getEdge());
+                                    } else {
+                                        fromEdges.add(EdgeIterator.ANY_EDGE);
+                                    }
+                                    if (waypointQueryGraph.isVirtualNode(toNode)) {
+                                        EdgeIterator iter = waypointQueryGraph.createEdgeExplorer().setBaseNode(toNode);
+                                        while (iter.next()) toEdges.add(iter.getEdge());
+                                    } else {
+                                        toEdges.add(EdgeIterator.ANY_EDGE);
+                                    }
+
+                                    for (int fEdge : fromEdges) {
+                                        for (int tEdge : toEdges) {
+                                            try {
+                                                List<Path> legPaths = router.calcPaths(waypointQueryGraph, fromNode, fEdge,
+                                                        new int[]{toNode}, new int[]{tEdge});
+                                                if (!legPaths.isEmpty() && legPaths.get(0).isFound()) {
+                                                    Path candidate = legPaths.get(0);
+                                                    if (bestLegPath == null || candidate.getDistance() < bestLegPath.getDistance()) {
+                                                        bestLegPath = candidate;
+                                                        bestFromSnap = fromSnap;
+                                                        bestToSnap = toSnap;
+                                                    }
+                                                }
+                                            } catch (Exception e) {
+                                                // Skip failed combinations
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (bestLegPath == null) {
+                                System.out.println("    -> FAILED: no path found (tried " +
+                                        fromCandidates.size() + " from × " + toCandidates.size() + " to snap combinations)");
                                 allSegmentsRouted = false;
                                 break;
                             }
-                            Path legPath = legPaths.get(0);
-                            List<EdgeIteratorState> legEdges = legPath.calcEdges();
+                            List<EdgeIteratorState> legEdges = bestLegPath.calcEdges();
                             allRoutedEdges.addAll(legEdges);
-                            totalRoutedDistance += legPath.getDistance();
+                            segmentEdges.addAll(legEdges);
+                            totalRoutedDistance += bestLegPath.getDistance();
                             System.out.println("    -> OK: " + legEdges.size() + " edges, distance=" +
-                                    String.format("%.1f", legPath.getDistance()) + "m, time=" + legPath.getTime() + "ms");
+                                    String.format("%.1f", bestLegPath.getDistance()) + "m, time=" + bestLegPath.getTime() + "ms" +
+                                    " (from edge " + bestFromSnap.getClosestEdge().getEdge() +
+                                    " to edge " + bestToSnap.getClosestEdge().getEdge() + ")");
                         }
+                        perSegmentRoutedEdges.add(segmentEdges);
                         if (!allSegmentsRouted) break;
                     }
 
                     if (allSegmentsRouted && !allRoutedEdges.isEmpty()) {
-                        // Merge: best path edges + routed segment edges
-                        Set<Integer> mergedEdgeIds = new LinkedHashSet<>();
+                        // Via-waypoint routing succeeded. Build the result DIRECTLY from
+                        // the merged path edges, bypassing Viterbi entirely.
+                        // Viterbi routes freely through the entire graph between candidates,
+                        // which causes massive loops. Instead, we already have the correct
+                        // path from the routing — just package it as a MatchResult.
 
-                        // Add best path edges
                         List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
-                        for (EdgeIteratorState e : bestPathEdges) {
-                            mergedEdgeIds.add(resolveToRealEdge(e).getEdge());
+
+                        // Build a map: real edge ID -> bestPath edge index (for anchor lookup)
+                        Map<Integer, Integer> bestPathEdgeIdToIndex = new HashMap<>();
+                        for (int bpIdx = 0; bpIdx < bestPathEdges.size(); bpIdx++) {
+                            bestPathEdgeIdToIndex.put(resolveToRealEdge(bestPathEdges.get(bpIdx)).getEdge(), bpIdx);
                         }
-                        int bestPathEdgeCount = mergedEdgeIds.size();
 
-                        // Add routed segment edges
-                        for (EdgeIteratorState e : allRoutedEdges) {
-                            mergedEdgeIds.add(resolveToRealEdge(e).getEdge());
-                        }
-                        int routedEdgeCount = mergedEdgeIds.size() - bestPathEdgeCount;
+                        // For each off-path segment, find where to splice into bestPath
+                        List<int[]> segmentAnchorBpIndices = new ArrayList<>();
+                        for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
+                            List<Integer> waypoints = segmentWaypointIndices.get(segNum);
+                            int anchorBeforeObsIdx = waypoints.get(0);
+                            int anchorAfterObsIdx = waypoints.get(waypoints.size() - 1);
 
-                        System.out.println("Via-waypoint routing: merged edges = " + mergedEdgeIds.size() +
-                                " (best path: " + bestPathEdgeCount + " + routed segments: " + routedEdgeCount + ")" +
-                                ", total routed distance=" + String.format("%.1f", totalRoutedDistance) + "m");
-
-                        // Check if all observations now snap to the merged edge set
-                        List<List<Snap>> viaSnapsPerObservation = new ArrayList<>();
-                        boolean allOnMergedPath = true;
-                        int missedCount = 0;
-                        for (int obsIdx = 0; obsIdx < snapsPerObservationTmp.size(); obsIdx++) {
-                            List<Snap> snaps = snapsPerObservationTmp.get(obsIdx);
-                            boolean found = false;
-                            for (Snap snap : snaps) {
-                                if (mergedEdgeIds.contains(snap.getClosestEdge().getEdge())) {
-                                    viaSnapsPerObservation.add(Collections.singletonList(snap));
-                                    found = true;
-                                    break;
+                            int anchorBeforeBpIdx = -1;
+                            if (!offPathSet.contains(anchorBeforeObsIdx)) {
+                                for (Snap snap : snapsPerObservationTmp.get(anchorBeforeObsIdx)) {
+                                    Integer bpIdx = bestPathEdgeIdToIndex.get(snap.getClosestEdge().getEdge());
+                                    if (bpIdx != null) { anchorBeforeBpIdx = bpIdx; break; }
                                 }
                             }
-                            if (!found) {
-                                missedCount++;
-                                Observation missedObs = filteredObservations.get(obsIdx);
-                                System.out.println("  Observation " + missedObs.getPoint().index + " NOT on merged path at " +
-                                        missedObs.getPoint().lat + "," + missedObs.getPoint().lon +
-                                        " (snaps on edges: " + snaps.stream().map(s ->
-                                        s.getClosestEdge().getEdge() + " at " + s.getSnappedPoint().lat + "," + s.getSnappedPoint().lon)
-                                        .collect(Collectors.joining("; ")) + ")");
-                                allOnMergedPath = false;
+                            int anchorAfterBpIdx = bestPathEdges.size();
+                            if (!offPathSet.contains(anchorAfterObsIdx)) {
+                                for (Snap snap : snapsPerObservationTmp.get(anchorAfterObsIdx)) {
+                                    Integer bpIdx = bestPathEdgeIdToIndex.get(snap.getClosestEdge().getEdge());
+                                    if (bpIdx != null) { anchorAfterBpIdx = bpIdx; break; }
+                                }
                             }
+                            segmentAnchorBpIndices.add(new int[]{anchorBeforeBpIdx, anchorAfterBpIdx});
                         }
 
-                        if (allOnMergedPath) {
-                            System.out.println("Via-waypoint routing: ALL " + snapsPerObservationTmp.size() +
-                                    " observations on merged path, using it for direct routing");
-                            snapsPerObservationOnRoutedPath.clear();
-                            snapsPerObservationOnRoutedPath.addAll(viaSnapsPerObservation);
-                            usedDirectRouting = true;
-                            anySnapNotOnAnyRoutedPath = false;
-                            routedPath = bestPath;
-                            
-                            // Print bestPath as GeoJSON for via-waypoint routing
-                            if (bestPath != null && bestPath.isFound()) {
-                                PointList bestPathPoints = bestPath.calcPoints();
-                                StringBuilder geoJson = new StringBuilder();
-                                geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
-                                for (int i = 0; i < bestPathPoints.size(); i++) {
-                                    if (i > 0) geoJson.append(",");
-                                    geoJson.append("[").append(bestPathPoints.getLon(i)).append(",").append(bestPathPoints.getLat(i)).append("]");
-                                }
-                                geoJson.append("]},\"properties\":{\"stroke\":\"#00ff00\",\"path_index\":")
-                                        .append(bestPathIndex)
-                                        .append(",\"distance\":")
-                                        .append(bestPath.getDistance())
-                                        .append(",\"snaps\":")
-                                        .append(maxSnapsCount)
-                                        .append(",\"selected\":true,\"via_waypoint\":true}}");
-                                System.out.println("BestPath GeoJSON (via-waypoint): " + geoJson);
+                        // Build spliced ordered edge list: bestPath edges with detour
+                        // segments inserted at the correct anchor positions
+                        List<EdgeIteratorState> mergedPath = new ArrayList<>();
+                        Set<Integer> seenEdgeIds = new HashSet<>();
+                        int bpCursor = 0;
+                        for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
+                            int[] anchors = segmentAnchorBpIndices.get(segNum);
+
+                            // Add bestPath edges up to and including anchor-before
+                            while (bpCursor <= anchors[0] && bpCursor < bestPathEdges.size()) {
+                                mergedPath.add(bestPathEdges.get(bpCursor));
+                                seenEdgeIds.add(resolveToRealEdge(bestPathEdges.get(bpCursor)).getEdge());
+                                bpCursor++;
                             }
-                            
-                            statistics.put("usedDirectRouting", true);
-                            statistics.put("usedViaWaypointRouting", true);
-                        } else {
-                            System.out.println("Via-waypoint routing: " + missedCount + " observations not on merged path, " +
-                                    "falling back to default matching");
-                            statistics.put("usedViaWaypointRouting", false);
+
+                            // Insert detour segment edges (skip duplicates)
+                            for (EdgeIteratorState e : perSegmentRoutedEdges.get(segNum)) {
+                                if (seenEdgeIds.add(resolveToRealEdge(e).getEdge())) {
+                                    mergedPath.add(e);
+                                }
+                            }
+
+                            // Advance past bestPath edges that overlap with detour
+                            while (bpCursor < anchors[1] && bpCursor < bestPathEdges.size()) {
+                                if (seenEdgeIds.add(resolveToRealEdge(bestPathEdges.get(bpCursor)).getEdge())) {
+                                    mergedPath.add(bestPathEdges.get(bpCursor));
+                                }
+                                bpCursor++;
+                            }
                         }
+                        // Add remaining bestPath edges
+                        while (bpCursor < bestPathEdges.size()) {
+                            if (seenEdgeIds.add(resolveToRealEdge(bestPathEdges.get(bpCursor)).getEdge())) {
+                                mergedPath.add(bestPathEdges.get(bpCursor));
+                            }
+                            bpCursor++;
+                        }
+
+                        System.out.println("Via-waypoint routing: built merged path with " +
+                                mergedPath.size() + " edges (bestPath: " + bestPathEdges.size() +
+                                " + routed segments), total routed distance=" +
+                                String.format("%.1f", totalRoutedDistance) + "m");
+
+                        // Build EdgeMatch list directly from merged path edges
+                        List<EdgeMatch> edgeMatches = new ArrayList<>();
+                        for (EdgeIteratorState edge : mergedPath) {
+                            EdgeIteratorState realEdge = resolveToRealEdge(edge);
+                            edgeMatches.add(new EdgeMatch(realEdge, new ArrayList<>()));
+                        }
+
+                        // Build MapMatchedPath from merged edges
+                        Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
+                        result = new MatchResult(edgeMatches);
+                        result.setMergedPath(new MapMatchedPath(queryGraph, queryGraphWeighting, mergedPath));
+                        double matchLength = mergedPath.stream().mapToDouble(EdgeIteratorState::getDistance).sum();
+                        long matchMillis = mergedPath.stream().mapToLong(e ->
+                                GHUtility.calcMillisWithTurnMillis(queryGraphWeighting, e, false, EdgeIterator.NO_EDGE)).sum();
+                        result.setMatchMillis(matchMillis);
+                        result.setMatchLength(matchLength);
+                        result.setGPXEntriesLength(gpxLength(observations));
+                        result.setGraph(queryGraph);
+                        result.setWeighting(queryGraphWeighting);
+
+                        // Print final path as GeoJSON
+                        StringBuilder geoJson = new StringBuilder();
+                        geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                        boolean first = true;
+                        for (EdgeIteratorState edge : mergedPath) {
+                            PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
+                            for (int i = 0; i < edgePoints.size(); i++) {
+                                if (!first) geoJson.append(",");
+                                geoJson.append("[").append(edgePoints.getLon(i)).append(",").append(edgePoints.getLat(i)).append("]");
+                                first = false;
+                            }
+                        }
+                        geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_type\":\"via_waypoint_direct\"")
+                                .append(",\"edges\":").append(mergedPath.size())
+                                .append(",\"distance\":").append(matchLength).append("}}");
+                        System.out.println("Final Path GeoJSON: " + geoJson);
+
+                        statistics.put("usedDirectRouting", true);
+                        statistics.put("usedViaWaypointRouting", true);
+                        statistics.put("matchLength", matchLength);
+                        // Mark all points as processed so the caller adds this result
+                        processedUpTo = observations.size() - 1;
+                        return result;
                     } else {
                         System.out.println("Via-waypoint routing: could not route all segments, falling back to default matching");
                         statistics.put("usedViaWaypointRouting", false);
@@ -488,7 +556,7 @@ public class RailwayMapMatching extends MapMatching {
             // Creates candidates from the Snaps of all observations (a candidate is basically a
             // Snap + direction). We need to put lower the accuracy to a max value of 300
             List<List<Snap>> snapsPerObservation = filteredObservations.stream()
-                    .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.min(o.getPoint().accuracy, 300.0),o.getPoint().index, o.getPoint().timestamp))
+                    .map(o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.min(o.getPoint().accuracy, 300.0), o.getPoint().index, o.getPoint().timestamp))
                     .collect(Collectors.toList());
             statistics.put("snapsPerObservation", snapsPerObservation.stream().mapToInt(Collection::size).toArray());
 
@@ -502,16 +570,55 @@ public class RailwayMapMatching extends MapMatching {
 
         } else {
             // remove from filteredObsevations, those which go back on the path
+            int beforeFilterCount = filteredObservations.size();
+            List<Observation> droppedObservations = filteredObservations.stream().filter(o ->
+                    snapsPerObservationOnRoutedPath.stream().noneMatch(s ->
+                            s.get(0).getQueryPoint().equals(new GHPoint(o.getPoint().lat, o.getPoint().lon))
+                    )
+            ).collect(Collectors.toList());
+            if (!droppedObservations.isEmpty()) {
+                System.out.println("[DIAG] Direct routing filter: dropping " + droppedObservations.size() + " observations out of " + beforeFilterCount);
+                for (Observation dropped : droppedObservations) {
+                    System.out.println("[DIAG]   Dropped obs index=" + dropped.getPoint().index +
+                            " at " + dropped.getPoint().lat + "," + dropped.getPoint().lon);
+                }
+            }
             filteredObservations = filteredObservations.stream().filter(o ->
                     snapsPerObservationOnRoutedPath.stream().anyMatch(s ->
                             s.get(0).getQueryPoint().equals(new GHPoint(o.getPoint().lat, o.getPoint().lon))
                     )
             ).collect(Collectors.toList());
+            System.out.println("[DIAG] Direct routing: filteredObservations=" + filteredObservations.size() +
+                    ", snapsPerObservationOnRoutedPath=" + snapsPerObservationOnRoutedPath.size());
+            if (filteredObservations.size() != snapsPerObservationOnRoutedPath.size()) {
+                System.out.println("[DIAG] WARNING: SIZE MISMATCH! filteredObservations=" + filteredObservations.size() +
+                        " vs snapsPerObservationOnRoutedPath=" + snapsPerObservationOnRoutedPath.size());
+            }
+            // Log each observation and its snap details before Viterbi
+            for (int diagIdx = 0; diagIdx < Math.min(filteredObservations.size(), snapsPerObservationOnRoutedPath.size()); diagIdx++) {
+                Observation diagObs = filteredObservations.get(diagIdx);
+                List<Snap> diagSnaps = snapsPerObservationOnRoutedPath.get(diagIdx);
+                Snap diagSnap = diagSnaps.get(0);
+                System.out.println("[DIAG] TimeStep " + diagIdx + ": obs.index=" + diagObs.getPoint().index +
+                        " GPS=" + diagObs.getPoint().lat + "," + diagObs.getPoint().lon +
+                        " -> snap.queryPoint=" + diagSnap.getQueryPoint().lat + "," + diagSnap.getQueryPoint().lon +
+                        " snap.node=" + diagSnap.getClosestNode() +
+                        " snap.edge=" + diagSnap.getClosestEdge().getEdge() +
+                        " (" + diagSnap.getClosestEdge().getName() + ")" +
+                        " snap.dist=" + String.format("%.1f", diagSnap.getQueryDistance()) + "m" +
+                        " candidates=" + diagSnaps.size() +
+                        " match=" + diagSnap.getQueryPoint().equals(new GHPoint(diagObs.getPoint().lat, diagObs.getPoint().lon)));
+            }
             statistics.put("snapsPerObservation", snapsPerObservationOnRoutedPath.stream().mapToInt(Collection::size).toArray());
 
-            // Create the query graph, containing split edges so that all the places where an observation might have happened
-            // are a node. This modifies the Snap objects and puts the new node numbers into them.
-            queryGraph = QueryGraph.create(graph, snapsPerObservationOnRoutedPath.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+            // Reuse the ORIGINAL QueryGraph (built at line 74 from all candidate snaps).
+            // The snapsPerObservationOnRoutedPath already contains filtered candidates
+            // that are on the merged edge set. Their closestNode values were set when
+            // the original QueryGraph was created, so they reference the correct virtual
+            // nodes in that graph. No need to rebuild the QueryGraph.
+            // Run Viterbi on the original QueryGraph with filtered candidates.
+            System.out.println("[DIAG] Using original QueryGraph for Viterbi with " +
+                    snapsPerObservationOnRoutedPath.size() + " filtered observation snap sets");
             List<ObservationWithCandidateStates> timeSteps = createTimeSteps(filteredObservations, snapsPerObservationOnRoutedPath);
             seq = computeViterbiSequence(timeSteps, ignoreErrors, sw);
             statistics.put("snapDistanceRanks", IntStream.range(0, seq.size()).map(i -> snapsPerObservationOnRoutedPath.get(i).indexOf(seq.get(i).state.getSnap())).toArray());
@@ -525,6 +632,27 @@ public class RailwayMapMatching extends MapMatching {
         statistics.put("snapDistances", seq.stream().mapToDouble(s -> s.state.getSnap().getQueryDistance()).toArray());
 
         List<EdgeIteratorState> path = seq.stream().filter(s1 -> s1.transitionDescriptor != null).flatMap(s1 -> s1.transitionDescriptor.calcEdges().stream()).collect(Collectors.toList());
+
+        // Print final path as GeoJSON for debugging
+        if (!path.isEmpty()) {
+            StringBuilder geoJson = new StringBuilder();
+            geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+            boolean first = true;
+            for (EdgeIteratorState edge : path) {
+                PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
+                for (int i = 0; i < edgePoints.size(); i++) {
+                    if (!first) geoJson.append(",");
+                    geoJson.append("[").append(edgePoints.getLon(i)).append(",").append(edgePoints.getLat(i)).append("]");
+                    first = false;
+                }
+            }
+            geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_type\":\"final\",\"edges\":")
+                    .append(path.size())
+                    .append(",\"distance\":")
+                    .append(seq.stream().filter(s -> s.transitionDescriptor != null).mapToDouble(s -> s.transitionDescriptor.getDistance()).sum())
+                    .append("}}");
+            System.out.println("Final Path GeoJSON: " + geoJson);
+        }
 
         result = new MatchResult(prepareEdgeMatches(seq));
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());

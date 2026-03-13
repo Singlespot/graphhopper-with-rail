@@ -359,7 +359,7 @@ public class MatchResource {
                         .append("}}");
             }
             fc.append("]}");
-            System.out.println("Paths GeoJSON: " + fc);
+//            System.out.println("Paths GeoJSON: " + fc);
             
             possiblePaths = possiblePathsWithExtremities.stream().map(pwe -> pwe.path).collect(Collectors.toList());
             return possiblePaths;
