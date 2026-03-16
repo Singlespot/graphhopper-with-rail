@@ -100,12 +100,21 @@
       <version>5.9.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.dropwizard</groupId>
+      <artifactId>dropwizard-testing</artifactId>
+      <version>4.0.16</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.19.1</version>
+        <configuration>
+          <argLine>-Xmx8g</argLine>
+        </configuration>
         <dependencies>
           <dependency>
             <groupId>org.junit.platform</groupId>
@@ -184,6 +193,14 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>15</source>
+          <target>15</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>
