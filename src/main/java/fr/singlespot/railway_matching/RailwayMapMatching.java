@@ -319,7 +319,7 @@ public class RailwayMapMatching extends MapMatching {
 
                 if (allWaypointsHaveSnaps) {
                     // Build a query graph for all waypoint snaps
-                    QueryGraph waypointQueryGraph = QueryGraph.create(graph, allSegmentSnaps);
+                    QueryGraph waypointQueryGraph = queryGraph;
 
                     // Route each segment and collect edges
                     List<EdgeIteratorState> allRoutedEdges = new ArrayList<>();
@@ -453,26 +453,37 @@ public class RailwayMapMatching extends MapMatching {
                         // Build merged path by replacing bestPath sections with routed segments
                         List<EdgeIteratorState> mergedPath = new ArrayList<>();
                         int bpCursor = 0;
+                        int prevAnchorAfterObsIdx = -1;
                         for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
                             int[] anchors = segmentAnchorBpIndices.get(segNum);
+                            List<Integer> waypoints = segmentWaypointIndices.get(segNum);
+                            int anchorBeforeObsIdx = waypoints.get(0);
+                            int anchorAfterObsIdx = waypoints.get(waypoints.size() - 1);
 
-                            // Add bestPath edges up to (but NOT including) anchor-before
-                            // The routed segment starts from the anchor-before node
-                            while (bpCursor < anchors[0] && bpCursor < bestPathEdges.size()) {
-                                mergedPath.add(bestPathEdges.get(bpCursor));
-                                bpCursor++;
+                            if (anchors[0] != -1) {
+                                int startNode = (bpCursor == 0) ? 
+                                    bestPathSnaps.get(0).get(0).getClosestNode() : 
+                                    bestPathSnaps.get(prevAnchorAfterObsIdx).get(0).getClosestNode();
+                                int endNode = bestPathSnaps.get(anchorBeforeObsIdx).get(0).getClosestNode();
+                                
+                                List<EdgeIteratorState> gapBaseEdges = bestPathEdges.subList(bpCursor, anchors[0] + 1);
+                                mergedPath.addAll(mapGapToQueryGraph(queryGraph, gapBaseEdges, startNode, endNode));
                             }
 
-                            // Insert ALL routed segment edges (anchor→offpath→...→anchor)
                             mergedPath.addAll(perSegmentRoutedEdges.get(segNum));
 
-                            // Skip bestPath edges between anchors (replaced by routed segment)
                             bpCursor = Math.max(bpCursor, anchors[1]);
+                            prevAnchorAfterObsIdx = anchorAfterObsIdx;
                         }
-                        // Add remaining bestPath edges after last segment
-                        while (bpCursor < bestPathEdges.size()) {
-                            mergedPath.add(bestPathEdges.get(bpCursor));
-                            bpCursor++;
+                        
+                        if (bpCursor < bestPathEdges.size()) {
+                            int startNode = (bpCursor == 0) ? 
+                                bestPathSnaps.get(0).get(0).getClosestNode() : 
+                                bestPathSnaps.get(prevAnchorAfterObsIdx).get(0).getClosestNode();
+                            int endNode = bestPathSnaps.get(filteredObservations.size() - 1).get(0).getClosestNode();
+                            
+                            List<EdgeIteratorState> gapBaseEdges = bestPathEdges.subList(bpCursor, bestPathEdges.size());
+                            mergedPath.addAll(mapGapToQueryGraph(queryGraph, gapBaseEdges, startNode, endNode));
                         }
 
                         System.out.println("Via-waypoint routing: using bestPath directly with " +
@@ -643,5 +654,45 @@ public class RailwayMapMatching extends MapMatching {
         result.setGraph(queryGraph);
         result.setWeighting(queryGraphWeighting);
         return result;
+    }
+
+
+    private List<EdgeIteratorState> mapGapToQueryGraph(QueryGraph queryGraph, List<EdgeIteratorState> baseEdgesSublist, int startNode, int endNode) {
+        List<EdgeIteratorState> result = new ArrayList<>();
+        int currNode = startNode;
+        for (int i = 0; i < baseEdgesSublist.size(); i++) {
+            EdgeIteratorState baseEdge = baseEdgesSublist.get(i);
+            int targetNode = (i == baseEdgesSublist.size() - 1) ? endNode : resolveToRealEdge(baseEdge).getAdjNode();
+            List<EdgeIteratorState> expanded = expandBaseEdge(queryGraph, baseEdge, currNode, targetNode);
+            result.addAll(expanded);
+            currNode = targetNode;
+        }
+        return result;
+    }
+
+    private List<EdgeIteratorState> expandBaseEdge(QueryGraph queryGraph, EdgeIteratorState baseEdge, int startNode, int targetNode) {
+        int realEdgeId = resolveToRealEdge(baseEdge).getEdge();
+        Queue<List<EdgeIteratorState>> queue = new LinkedList<>();
+        queue.add(new ArrayList<>());
+        EdgeExplorer explorer = queryGraph.createEdgeExplorer();
+        
+        while (!queue.isEmpty()) {
+            List<EdgeIteratorState> path = queue.poll();
+            int curr = path.isEmpty() ? startNode : path.get(path.size() - 1).getAdjNode();
+            if (curr == targetNode) {
+                return path;
+            }
+            EdgeIterator iter = explorer.setBaseNode(curr);
+            while (iter.next()) {
+                if (resolveToRealEdge(iter).getEdge() == realEdgeId) {
+                    if (path.isEmpty() || iter.getAdjNode() != path.get(path.size() - 1).getBaseNode()) {
+                        List<EdgeIteratorState> newPath = new ArrayList<>(path);
+                        newPath.add(iter.detach(false));
+                        queue.add(newPath);
+                    }
+                }
+            }
+        }
+        return new ArrayList<>();
     }
 }
