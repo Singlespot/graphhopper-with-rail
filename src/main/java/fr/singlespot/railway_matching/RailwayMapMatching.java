@@ -8,7 +8,6 @@ import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.BaseGraph;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.storage.index.Snap;
-import com.graphhopper.routing.querygraph.VirtualEdgeIteratorState;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 
@@ -60,7 +59,6 @@ public class RailwayMapMatching extends MapMatching {
         this.offset = offset;
         boolean usedDirectRouting = false;
         boolean forcedDirectRouting = false;
-        Set<Integer> mergedPathEdgeKeys = new HashSet<>();
         resetCounters(observations.size(), offset);
         List<Observation> observationSubList = observations.subList(offset, observations.size());
         List<Observation> filteredObservations = filterObservations(observationSubList);
@@ -102,19 +100,12 @@ public class RailwayMapMatching extends MapMatching {
             for (int routedPathsIndex = 0, routedPathsSize = routedPaths.size(); routedPathsIndex < routedPathsSize; routedPathsIndex++) {
                 // Get the current routed path to check
                 Path tmpRoutedPath = routedPaths.get(routedPathsIndex);
-                // Initialize a list to store snaps that are on this routed path
-                List<List<Snap>> snapsPerObservationOnRoutedPathTmp = new ArrayList<>();
                 // Get the set to store edge indices for this path
                 Set<Integer> pathEdgeIndices = routedPathsPathEdgeIndices.get(routedPathsIndex);
                 // Skip invalid paths
                 if (!tmpRoutedPath.isFound()) {
                     continue;
                 }
-                // Get all edges of the path
-                List<EdgeIteratorState> pathEdges = tmpRoutedPath.calcEdges();
-                // Track the maximum edge index found for ordering
-                int maxEdgeIndex = -1;
-
                 // Counter for snaps on this path
                 int snapsOnPathCount = snapsOnPathCounts[routedPathsIndex];
 
@@ -157,7 +148,7 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
 // Print selected path as GeoJSON for direct routing
-            if (bestPath.isFound()) {
+            if (bestPath != null && bestPath.isFound()) {
                 PointList pathPoints = bestPath.calcPoints();
                 StringBuilder geoJson = new StringBuilder();
                 geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
@@ -253,8 +244,6 @@ public class RailwayMapMatching extends MapMatching {
                             ", anchor after: obs " + (anchorAfter < totalObs ? filteredObservations.get(anchorAfter).getPoint().index : "NONE") + ")");
                 }
 
-                // Collect snaps for all waypoints across all segments (for building the QueryGraph)
-                List<Snap> allSegmentSnaps = new ArrayList<>();
                 // Build waypoint lists for each segment: [anchorBefore, offPath1, ..., offPathN, anchorAfter]
                 List<List<Integer>> segmentWaypointIndices = new ArrayList<>();
                 boolean allWaypointsHaveSnaps = true;
@@ -287,14 +276,16 @@ public class RailwayMapMatching extends MapMatching {
                     segmentWaypointIndices.add(waypoints);
                 }
 
-                // Snap all waypoint observations - store ALL candidates per observation
+                // Use existing snaps from snapsPerObservationTmp
                 Map<Integer, List<Snap>> waypointAllSnapsMap = new LinkedHashMap<>();
                 for (List<Integer> waypoints : segmentWaypointIndices) {
                     for (int obsIdx : waypoints) {
                         if (waypointAllSnapsMap.containsKey(obsIdx)) continue;
                         Observation obs = filteredObservations.get(obsIdx);
-                        List<Snap> candidateSnaps = findCandidateSnaps(obs.getPoint().lat, obs.getPoint().lon,
-                                Math.min(Math.max(20,obs.getPoint().accuracy), 300.0), obs.getPoint().index, obs.getPoint().timestamp);
+                        
+                        // Use the ALREADY SNAPPED candidates which have virtual nodes in queryGraph
+                        List<Snap> candidateSnaps = snapsPerObservationTmp.get(obsIdx);
+                        
                         if (candidateSnaps.isEmpty()) {
                             System.out.println("  Obs " + obs.getPoint().index + ": NO SNAPS at " +
                                     obs.getPoint().lat + "," + obs.getPoint().lon +
@@ -303,7 +294,6 @@ public class RailwayMapMatching extends MapMatching {
                             break;
                         }
                         waypointAllSnapsMap.put(obsIdx, candidateSnaps);
-                        allSegmentSnaps.addAll(candidateSnaps);
                         Snap closestSnap = candidateSnaps.get(0);
                         System.out.println("  Obs " + obs.getPoint().index + (offPathSet.contains(obsIdx) ? " [OFF-PATH]" : " [ON-PATH anchor]") +
                                 ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
@@ -318,15 +308,14 @@ public class RailwayMapMatching extends MapMatching {
                 }
 
                 if (allWaypointsHaveSnaps) {
-                    // Build a query graph for all waypoint snaps
-                    QueryGraph waypointQueryGraph = QueryGraph.create(graph, allSegmentSnaps);
+                    // We don't need a new QueryGraph, we can reuse queryGraph which already has the virtual nodes for all snaps
 
                     // Route each segment and collect edges
                     List<EdgeIteratorState> allRoutedEdges = new ArrayList<>();
                     // Track edges per segment for building the spliced ordered edge list
                     List<List<EdgeIteratorState>> perSegmentRoutedEdges = new ArrayList<>();
                     boolean allSegmentsRouted = true;
-                    double totalRoutedDistance = 0;
+                    Map<Integer, Snap> chosenSnapsByObsIdx = new HashMap<>();
 
                     for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
                         List<Integer> waypoints = segmentWaypointIndices.get(segNum);
@@ -374,7 +363,7 @@ public class RailwayMapMatching extends MapMatching {
                                     int toNode = toSnap.getClosestNode();
                                     if (fromNode == toNode) continue;
                                     try {
-                                        List<Path> legPaths = router.calcPaths(waypointQueryGraph, fromNode, EdgeIterator.ANY_EDGE,
+                                        List<Path> legPaths = router.calcPaths(queryGraph, fromNode, EdgeIterator.ANY_EDGE,
                                                 new int[]{toNode}, new int[]{EdgeIterator.ANY_EDGE});
                                         if (!legPaths.isEmpty() && legPaths.get(0).isFound()) {
                                             Path candidate = legPaths.get(0);
@@ -402,10 +391,16 @@ public class RailwayMapMatching extends MapMatching {
                                 allSegmentsRouted = false;
                                 break;
                             }
+                            
+                            // Track chosen snaps for Viterbi
+                            if (!chosenSnapsByObsIdx.containsKey(fromObsIdx)) {
+                                chosenSnapsByObsIdx.put(fromObsIdx, bestFromSnap);
+                            }
+                            chosenSnapsByObsIdx.put(toObsIdx, bestToSnap);
+
                             List<EdgeIteratorState> legEdges = bestLegPath.calcEdges();
                             allRoutedEdges.addAll(legEdges);
                             segmentEdges.addAll(legEdges);
-                            totalRoutedDistance += bestLegPath.getDistance();
                             System.out.println("    -> OK: " + legEdges.size() + " edges, distance=" +
                                     String.format("%.1f", bestLegPath.getDistance()) + "m, time=" + bestLegPath.getTime() + "ms" +
                                     " (from edge " + bestFromSnap.getClosestEdge().getEdge() +
@@ -416,16 +411,10 @@ public class RailwayMapMatching extends MapMatching {
                     }
 
                     if (allSegmentsRouted && !allRoutedEdges.isEmpty()) {
-                        // Via-waypoint routing succeeded. Build the result DIRECTLY from
-                        // the merged path edges, bypassing Viterbi entirely.
-                        // Viterbi routes freely through the entire graph between candidates,
-                        // which causes massive loops. Instead, we already have the correct
-                        // path from the routing — just package it as a MatchResult.
-
+                        // Via-waypoint routing succeeded. We will build snapsPerObservationOnRoutedPath
+                        // from the bestPath + routed segments, then pass it to Viterbi
+                        
                         // Build merged path: bestPath edges with routed segments
-                        // REPLACING (not supplementing) the bestPath section between
-                        // each pair of anchors. The routed segments go through the
-                        // off-path observations: anchor→offPath1→...→offPathN→anchor.
                         List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
 
                         // Build a map: real edge ID -> first bestPath edge index
@@ -461,9 +450,6 @@ public class RailwayMapMatching extends MapMatching {
                                 }
                             }
                             segmentAnchorBpIndices.add(new int[]{anchorBeforeBpIdx, anchorAfterBpIdx});
-                            System.out.println("  Segment " + segNum + " anchors: bestPath[" +
-                                    anchorBeforeBpIdx + "] -> bestPath[" + anchorAfterBpIdx + "]" +
-                                    ", routed edges: " + perSegmentRoutedEdges.get(segNum).size());
                         }
 
                         // Build merged path by replacing bestPath sections with routed segments
@@ -473,13 +459,12 @@ public class RailwayMapMatching extends MapMatching {
                             int[] anchors = segmentAnchorBpIndices.get(segNum);
 
                             // Add bestPath edges up to (but NOT including) anchor-before
-                            // The routed segment starts from the anchor-before node
                             while (bpCursor < anchors[0] && bpCursor < bestPathEdges.size()) {
                                 mergedPath.add(bestPathEdges.get(bpCursor));
                                 bpCursor++;
                             }
 
-                            // Insert ALL routed segment edges (anchor→offpath→...→anchor)
+                            // Insert ALL routed segment edges
                             mergedPath.addAll(perSegmentRoutedEdges.get(segNum));
 
                             // Skip bestPath edges between anchors (replaced by routed segment)
@@ -491,53 +476,35 @@ public class RailwayMapMatching extends MapMatching {
                             bpCursor++;
                         }
 
-                        System.out.println("Via-waypoint routing: using bestPath directly with " +
-                                mergedPath.size() + " edges, total routed distance=" +
-                                String.format("%.1f", totalRoutedDistance) + "m");
-
-                        // Build EdgeMatch list directly from merged path edges
-                        List<EdgeMatch> edgeMatches = new ArrayList<>();
-                        for (EdgeIteratorState edge : mergedPath) {
-                            EdgeIteratorState realEdge = resolveToRealEdge(edge);
-                            edgeMatches.add(new EdgeMatch(realEdge, new ArrayList<>()));
-                        }
-
-                        // Build MapMatchedPath from merged edges
-                        Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
-                        result = new MatchResult(edgeMatches);
-                        result.setMergedPath(new MapMatchedPath(queryGraph, queryGraphWeighting, mergedPath));
-                        double matchLength = mergedPath.stream().mapToDouble(EdgeIteratorState::getDistance).sum();
-                        long matchMillis = mergedPath.stream().mapToLong(e ->
-                                GHUtility.calcMillisWithTurnMillis(queryGraphWeighting, e, false, EdgeIterator.NO_EDGE)).sum();
-                        result.setMatchMillis(matchMillis);
-                        result.setMatchLength(matchLength);
-                        result.setGPXEntriesLength(gpxLength(observations));
-                        result.setGraph(queryGraph);
-                        result.setWeighting(queryGraphWeighting);
-
-                        // Print final path as GeoJSON
-                        StringBuilder geoJson = new StringBuilder();
-                        geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
-                        boolean first = true;
-                        for (EdgeIteratorState edge : mergedPath) {
-                            PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
-                            for (int i = 0; i < edgePoints.size(); i++) {
-                                if (!first) geoJson.append(",");
-                                geoJson.append("[").append(edgePoints.getLon(i)).append(",").append(edgePoints.getLat(i)).append("]");
-                                first = false;
+                        System.out.println("Via-waypoint routing: successfully routed detour segments. Total merged edges=" + mergedPath.size());
+                        
+                        // Initialize snapsPerObservationOnRoutedPath to behave exactly like direct routing
+                        // We use bestPathSnaps (which is snapsPerObservationOnRoutedPathTmpList.get(bestPathIndex))
+                        // and add the newly found snaps that allow the suitable leg for routing via off path points.
+                        snapsPerObservationOnRoutedPath.clear();
+                        
+                        for (int i = 0; i < filteredObservations.size(); i++) {
+                            GHPoint obsPoint = new GHPoint(filteredObservations.get(i).getPoint().lat, filteredObservations.get(i).getPoint().lon);
+                            
+                            // If this index is an off-path point and we successfully routed it, use the chosen snap
+                            if (offPathSet.contains(i) && chosenSnapsByObsIdx.containsKey(i)) {
+                                snapsPerObservationOnRoutedPath.add(Collections.singletonList(chosenSnapsByObsIdx.get(i)));
+                            } else {
+                                // Find if this observation's snap is in bestPathSnaps
+                                for (List<Snap> snaps : bestPathSnaps) {
+                                    if (!snaps.isEmpty() && snaps.get(0).getQueryPoint().equals(obsPoint)) {
+                                        snapsPerObservationOnRoutedPath.add(snaps);
+                                        break;
+                                    }
+                                }
                             }
                         }
-                        geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_type\":\"via_waypoint_direct\"")
-                                .append(",\"edges\":").append(mergedPath.size())
-                                .append(",\"distance\":").append(matchLength).append("}}");
-                        System.out.println("Final Path GeoJSON: " + geoJson);
 
-                        statistics.put("usedDirectRouting", true);
+                        // We will proceed to Viterbi using these snaps
+                        anySnapNotOnAnyRoutedPath = false;
+                        routedPath = bestPath;
                         statistics.put("usedViaWaypointRouting", true);
-                        statistics.put("matchLength", matchLength);
-                        // Mark all points as processed so the caller adds this result
-                        processedUpTo = observations.size() - 1;
-                        return result;
+                        // Fallthrough to Viterbi matching below...
                     } else {
                         System.out.println("Via-waypoint routing: could not route all segments, falling back to default matching");
                         statistics.put("usedViaWaypointRouting", false);
@@ -567,9 +534,13 @@ public class RailwayMapMatching extends MapMatching {
         } else {
             // remove from filteredObsevations, those which go back on the path
             int beforeFilterCount = filteredObservations.size();
+            
+            // To use inside lambdas, we need an effectively final reference
+            final List<List<Snap>> finalSnapsOnRoutedPath = snapsPerObservationOnRoutedPath;
+            
             List<Observation> droppedObservations = filteredObservations.stream().filter(o ->
-                    snapsPerObservationOnRoutedPath.stream().noneMatch(s ->
-                            s.get(0).getQueryPoint().equals(new GHPoint(o.getPoint().lat, o.getPoint().lon))
+                    finalSnapsOnRoutedPath.stream().noneMatch(s ->
+                            !s.isEmpty() && s.get(0).getQueryPoint().equals(new GHPoint(o.getPoint().lat, o.getPoint().lon))
                     )
             ).collect(Collectors.toList());
             if (!droppedObservations.isEmpty()) {
@@ -580,10 +551,14 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
             filteredObservations = filteredObservations.stream().filter(o ->
-                    snapsPerObservationOnRoutedPath.stream().anyMatch(s ->
-                            s.get(0).getQueryPoint().equals(new GHPoint(o.getPoint().lat, o.getPoint().lon))
+                    finalSnapsOnRoutedPath.stream().anyMatch(s ->
+                            !s.isEmpty() && s.get(0).getQueryPoint().equals(new GHPoint(o.getPoint().lat, o.getPoint().lon))
                     )
             ).collect(Collectors.toList());
+            
+            // Filter out empty snaps lists too so the sizes match
+            snapsPerObservationOnRoutedPath.removeIf(List::isEmpty);
+            
             System.out.println("[DIAG] Direct routing: filteredObservations=" + filteredObservations.size() +
                     ", snapsPerObservationOnRoutedPath=" + snapsPerObservationOnRoutedPath.size());
             if (filteredObservations.size() != snapsPerObservationOnRoutedPath.size()) {
@@ -617,8 +592,8 @@ public class RailwayMapMatching extends MapMatching {
                     snapsPerObservationOnRoutedPath.size() + " filtered observation snap sets");
             List<ObservationWithCandidateStates> timeSteps = createTimeSteps(filteredObservations, snapsPerObservationOnRoutedPath);
             seq = computeViterbiSequence(timeSteps, ignoreErrors, sw);
-            statistics.put("snapDistanceRanks", IntStream.range(0, seq.size()).map(i -> snapsPerObservationOnRoutedPath.get(i).indexOf(seq.get(i).state.getSnap())).toArray());
-            statistics.put("maxSnapDistances", IntStream.range(0, seq.size()).mapToDouble(i -> snapsPerObservationOnRoutedPath.get(i).stream().mapToDouble(Snap::getQueryDistance).max().orElse(-1.0)).toArray());
+            statistics.put("snapDistanceRanks", IntStream.range(0, seq.size()).map(i -> finalSnapsOnRoutedPath.get(i).indexOf(seq.get(i).state.getSnap())).toArray());
+            statistics.put("maxSnapDistances", IntStream.range(0, seq.size()).mapToDouble(i -> finalSnapsOnRoutedPath.get(i).stream().mapToDouble(Snap::getQueryDistance).max().orElse(-1.0)).toArray());
 
         }
 
