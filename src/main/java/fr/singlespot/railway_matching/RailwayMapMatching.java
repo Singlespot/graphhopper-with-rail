@@ -342,10 +342,10 @@ public class RailwayMapMatching extends MapMatching {
                         for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
                             int fromObsIdx = waypoints.get(wpIdx);
                             int toObsIdx = waypoints.get(wpIdx + 1);
-                            // Limit to top 3 closest snap candidates to avoid combinatorial explosion
+                            // Limit to top 10 closest snap candidates to avoid combinatorial explosion
                             List<Snap> fromCandidates = waypointAllSnapsMap.get(fromObsIdx);
                             List<Snap> toCandidates = waypointAllSnapsMap.get(toObsIdx);
-                            int maxCandidates = 3;
+                            int maxCandidates = 10;
                             if (fromCandidates.size() > maxCandidates) fromCandidates = fromCandidates.subList(0, maxCandidates);
                             if (toCandidates.size() > maxCandidates) toCandidates = toCandidates.subList(0, maxCandidates);
 
@@ -354,10 +354,20 @@ public class RailwayMapMatching extends MapMatching {
                                     " -> obs " + toCandidates.get(0).getQueryPoint().index +
                                     " (" + toCandidates.size() + " snap candidates)");
 
+                            // Calculate the direct distance between the two observations to use as a baseline for a "suitable" path
+                            GHPoint fromPoint = filteredObservations.get(fromObsIdx).getPoint();
+                            GHPoint toPoint = filteredObservations.get(toObsIdx).getPoint();
+                            double directDistance = DistanceCalcEarth.DIST_EARTH.calcDist(
+                                    fromPoint.lat, fromPoint.lon, toPoint.lat, toPoint.lon);
+                            // Define "suitable" as path distance <= direct distance * 2.0 (allowing for some detour)
+                            // or if direct distance is very small, add a fixed buffer
+                            double suitableDistanceThreshold = Math.max(directDistance * 2.0, directDistance + 2000.0);
+
                             // Try from-snap × to-snap combinations and pick shortest path
                             Path bestLegPath = null;
                             Snap bestFromSnap = null;
                             Snap bestToSnap = null;
+                            boolean suitablePathFound = false;
                             for (Snap fromSnap : fromCandidates) {
                                 int fromNode = fromSnap.getClosestNode();
                                 for (Snap toSnap : toCandidates) {
@@ -372,12 +382,18 @@ public class RailwayMapMatching extends MapMatching {
                                                 bestLegPath = candidate;
                                                 bestFromSnap = fromSnap;
                                                 bestToSnap = toSnap;
+                                                
+                                                if (candidate.getDistance() <= suitableDistanceThreshold) {
+                                                    suitablePathFound = true;
+                                                    break;
+                                                }
                                             }
                                         }
                                     } catch (Exception e) {
                                         // Skip failed combinations
                                     }
                                 }
+                                if (suitablePathFound) break;
                             }
 
                             if (bestLegPath == null) {
