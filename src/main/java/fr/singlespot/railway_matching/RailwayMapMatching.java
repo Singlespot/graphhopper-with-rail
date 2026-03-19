@@ -477,34 +477,57 @@ public class RailwayMapMatching extends MapMatching {
                         }
 
                         System.out.println("Via-waypoint routing: successfully routed detour segments. Total merged edges=" + mergedPath.size());
-                        
-                        // Initialize snapsPerObservationOnRoutedPath to behave exactly like direct routing
-                        // We use bestPathSnaps (which is snapsPerObservationOnRoutedPathTmpList.get(bestPathIndex))
-                        // and add the newly found snaps that allow the suitable leg for routing via off path points.
-                        snapsPerObservationOnRoutedPath.clear();
-                        
-                        for (int i = 0; i < filteredObservations.size(); i++) {
-                            GHPoint obsPoint = new GHPoint(filteredObservations.get(i).getPoint().lat, filteredObservations.get(i).getPoint().lon);
-                            
-                            // If this index is an off-path point and we successfully routed it, use the chosen snap
-                            if (offPathSet.contains(i) && chosenSnapsByObsIdx.containsKey(i)) {
-                                snapsPerObservationOnRoutedPath.add(Collections.singletonList(chosenSnapsByObsIdx.get(i)));
-                            } else {
-                                // Find if this observation's snap is in bestPathSnaps
-                                for (List<Snap> snaps : bestPathSnaps) {
-                                    if (!snaps.isEmpty() && snaps.get(0).getQueryPoint().equals(obsPoint)) {
-                                        snapsPerObservationOnRoutedPath.add(snaps);
-                                        break;
-                                    }
-                                }
-                            }
+
+                        // Build EdgeMatch list directly from merged path edges
+                        List<EdgeMatch> edgeMatches = new ArrayList<>();
+                        for (EdgeIteratorState edge : mergedPath) {
+                            EdgeIteratorState realEdge = resolveToRealEdge(edge);
+                            edgeMatches.add(new EdgeMatch(realEdge, new ArrayList<>()));
                         }
 
-                        // We will proceed to Viterbi using these snaps
-                        anySnapNotOnAnyRoutedPath = false;
-                        routedPath = bestPath;
+                        double matchLength = mergedPath.stream().mapToDouble(EdgeIteratorState::getDistance).sum();
+
+                        // Print final path as GeoJSON
+                        StringBuilder geoJson = new StringBuilder();
+                        geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                        boolean first = true;
+                        for (EdgeIteratorState edge : mergedPath) {
+                            PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
+                            for (int i = 0; i < edgePoints.size(); i++) {
+                                if (!first) geoJson.append(",");
+                                geoJson.append("[").append(edgePoints.getLon(i)).append(",").append(edgePoints.getLat(i)).append("]");
+                                first = false;
+                            }
+                        }
+                        geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_type\":\"via_waypoint_direct\"")
+                                .append(",\"edges\":").append(mergedPath.size())
+                                .append(",\"distance\":").append(matchLength).append("}}");
+                        System.out.println("After routing Path GeoJSON: " + geoJson);
+
+                        // Via-waypoint routing produced a valid merged path — return the result
+                        // directly instead of falling through to Viterbi, which would try to
+                        // independently re-route between observations and may fail.
+                        statistics.put("usedDirectRouting", false);
+                        statistics.put("forcedDirectRouting", false);
                         statistics.put("usedViaWaypointRouting", true);
-                        // Fallthrough to Viterbi matching below...
+                        statistics.put("visitedNodes", router.getVisitedNodes());
+
+                        // Mark all observations as processed so the caller adds the result
+                        processedUpTo = observations.size() - 1;
+
+                        // Use bestPath directly as the merged path — it is a valid Path
+                        // object from proper routing with a consistent node chain.
+                        // Use the graph the bestPath was routed on (its internal QueryGraph)
+                        // so that PathMerger can traverse it correctly.
+                        Weighting viaWeighting = router.getWeighting();
+                        result = new MatchResult(edgeMatches);
+                        result.setMergedPath(bestPath);
+                        result.setMatchMillis(bestPath.getTime());
+                        result.setMatchLength(bestPath.getDistance());
+                        result.setGPXEntriesLength(gpxLength(observations));
+                        result.setGraph(bestPath.getGraph());
+                        result.setWeighting(viaWeighting);
+                        return result;
                     } else {
                         System.out.println("Via-waypoint routing: could not route all segments, falling back to default matching");
                         statistics.put("usedViaWaypointRouting", false);
