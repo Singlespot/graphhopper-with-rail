@@ -1345,7 +1345,7 @@ public class RailwayMapMatchingTest {
             app.before();
             int port = app.getLocalPort();
             HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create("http://localhost:" + port + "/match?profile=all_tracks&type=json&max_visited_nodes=25000&max_processing_time=300&gps_accuracy=20&force_initial_routing=false&use_initial_routing=true")).header("Content-Type", "application/gpx+xml").POST(HttpRequest.BodyPublishers.ofString(FULL_GPX_DATA, StandardCharsets.UTF_8)).build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create("http://localhost:" + port + "/match?profile=all_tracks&type=json&max_visited_nodes=25000&max_processing_time=300&gps_accuracy=20&force_initial_routing=false&use_initial_routing=true&details=edge_key&traversal_keys=true")).header("Content-Type", "application/gpx+xml").POST(HttpRequest.BodyPublishers.ofString(FULL_GPX_DATA, StandardCharsets.UTF_8)).build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             assertEquals(200, response.statusCode(), "HTTP /match should succeed. body=" + response.body());
@@ -1360,6 +1360,21 @@ public class RailwayMapMatchingTest {
             assertNotNull(matching, "Response should include 'map_matching' statistics");
             assertTrue(matching.path("distance").asDouble() > 0, "Map matching distance should be > 0");
             assertTrue(matching.has("usedDirectRouting"), "Map matching stats should include direct routing info");
+            
+            // Check if observation_indexes are present
+            JsonNode observationIndexes = json.get("observation_indexes");
+            if (observationIndexes != null) {
+                System.out.println("observation_indexes found: " + observationIndexes.size() + " entries");
+                // Validate that observation indexes are non-negative
+                for (JsonNode idx : observationIndexes) {
+                    if (idx.isArray() && idx.size() == 2) {
+                        assertTrue(idx.get(0).asInt() >= 0, "First observation index should be >= 0");
+                        assertTrue(idx.get(1).asInt() >= 0, "Second observation index should be >= 0");
+                    }
+                }
+            } else {
+                System.out.println("WARNING: No observation_indexes in response");
+            }
         } catch (Exception e) {
             fail("HTTP map matching should succeed with config.yml and profile=all_tracks: " + e.getMessage());
         } finally {

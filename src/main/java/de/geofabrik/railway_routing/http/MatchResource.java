@@ -153,11 +153,14 @@ public class MatchResource {
                     .parse();
             InputCSVEntry last = null;
             ArrayList<Observation> result = new ArrayList<Observation>(inputEntries.size());
-            for (InputCSVEntry entry : inputEntries) {
+            for (int i = 0; i < inputEntries.size(); i++) {
+                InputCSVEntry entry = inputEntries.get(i);
                 if (last != null) {
                     last = entry;
                 }
-                result.add(entry.toGPXEntry());
+                Observation observation = entry.toGPXEntry();
+                observation.getPoint().index = i;  // Set proper observation index
+                result.add(observation);
             }
             return result;
         } catch (NumberFormatException e) {
@@ -179,7 +182,14 @@ public class MatchResource {
         if (gpx.trk.size() > 1) {
             throw new IllegalArgumentException("GPX documents with multiple tracks not supported yet.");
         }
-        return GpxConversions.getEntries(gpx.trk.get(0));
+        List<Observation> observations = GpxConversions.getEntries(gpx.trk.get(0));
+        
+        // Set proper observation indexes based on their order in the GPX track
+        for (int i = 0; i < observations.size(); i++) {
+            observations.get(i).getPoint().index = i;
+        }
+        
+        return observations;
     }
 
     public List<Observation> parseInput(InputStream inputStream, String contentType, char separator, char quoteChar)
@@ -568,6 +578,7 @@ public class MatchResource {
                     map.putPOJO("traversal_keys", traversalKeylist);
                 }
                 if (responsePath.getPathDetails().get("edge_key") != null) {
+                    System.out.println("DEBUG: edge_key path details found with " + responsePath.getPathDetails().get("edge_key").size() + " entries");
                     List<Object> observationIndexes = new ArrayList<>();
                     int i = 0;
                     assert edgeMatchCount == responsePath.getPathDetails().get("edge_key").size();
@@ -582,10 +593,26 @@ public class MatchResource {
                                     int bestCandidateIdx = -1;
                                     for (int j = snappedEdgeStartPointIdx; j <= snappedEdgeLastPointIdx; j++) {
                                         GHPoint3D candidate = responsePath.getPoints().get(j);
-                                        if (candidate.getLat() == snappedPoint.getLat() && candidate.getLon() == snappedPoint.getLon()) {
+                                        // Use tolerance for coordinate comparison due to precision differences
+                                        if (Math.abs(candidate.getLat() - snappedPoint.getLat()) < 1e-7 && 
+                                            Math.abs(candidate.getLon() - snappedPoint.getLon()) < 1e-7) {
                                             bestCandidateIdx = j;
                                             break;
                                         }
+                                    }
+                                    if (bestCandidateIdx == -1) {
+                                        System.out.println("DEBUG: Could not find snap point for observation " + point.index + " at " + snappedPoint + " in edge range " + snappedEdgeStartPointIdx + "-" + snappedEdgeLastPointIdx);
+                                        // Try to find the closest point as fallback
+                                        double minDistance = Double.MAX_VALUE;
+                                        for (int j = snappedEdgeStartPointIdx; j <= snappedEdgeLastPointIdx; j++) {
+                                            GHPoint3D candidate = responsePath.getPoints().get(j);
+                                            double distance = Math.hypot(candidate.getLat() - snappedPoint.getLat(), candidate.getLon() - snappedPoint.getLon());
+                                            if (distance < minDistance) {
+                                                minDistance = distance;
+                                                bestCandidateIdx = j;
+                                            }
+                                        }
+                                        System.out.println("DEBUG: Using closest point at index " + bestCandidateIdx + " with distance " + minDistance);
                                     }
                                     observationIndexes.add(new ArrayList<Integer>(Arrays.asList(point.index, bestCandidateIdx)));
                                 }
@@ -594,6 +621,8 @@ public class MatchResource {
                         }
                     }
                     map.putPOJO("observation_indexes", observationIndexes);
+                } else {
+                    System.out.println("DEBUG: No edge_key path details found. Available path details: " + responsePath.getPathDetails().keySet());
                 }
 
                 return Response.ok(map).
