@@ -587,7 +587,9 @@ public class MatchResource {
                             if (em.getStates().size() > 0) {
                                 for (State state : em.getStates()) {
                                     GHPoint point = state.getEntry().getPoint();
+                                    System.out.println("DEBUG: observation index"+ point.index);
                                     GHPoint3D snappedPoint = state.getSnap().getSnappedPoint();
+                                    System.out.println("DEBUG: snappedPoint index"+ state.getSnap().getQueryPoint().index);
                                     int snappedEdgeStartPointIdx = responsePath.getPathDetails().get("edge_key").get(i).getFirst();
                                     int snappedEdgeLastPointIdx = responsePath.getPathDetails().get("edge_key").get(i).getLast();
                                     int bestCandidateIdx = -1;

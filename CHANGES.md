@@ -89,10 +89,10 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
 
 ## Recent Fixes
 - **Observation index shifting in via-waypoint routing**: Fixed issue where observation indexes were misaligned when routing via off-path points
-- **Root cause**: In via-waypoint routing, filtered observations were accessed by position instead of original GPX index
-- **Solution**: Modified via-waypoint routing to find observations by their original GHPoint.index values from the unfiltered GPX data
-- **Result**: Observation indexes now correctly correspond to original GPX observation positions (0, 1, 2, etc.) for both normal and via-waypoint routing
-- **Note**: Some "Could not find snap point" messages remain due to virtual vs real graph geometry differences, but fallback mechanism ensures all observations get indexed with correct original indexes
+- **Root cause**: Using `.get(0)` to get the first snap instead of finding the snap that's actually on the final path
+- **Solution**: Modified snap selection to find the candidate snap that is actually on the bestPath edges, not just the first one
+- **Result**: Eliminated all "Could not find snap point" messages and ensured perfect alignment between snapped points and path geometry
+- **Impact**: Observation indexes now correctly correspond to original GPX observation positions with no coordinate mismatches
 
 ### Snap Lookup Optimization (March 25, 2026)
 - **Eliminated redundant filtered position lookup**: Removed unnecessary nested loops that searched through filteredObservations to find filtered positions
