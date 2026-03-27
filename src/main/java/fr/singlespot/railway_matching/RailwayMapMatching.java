@@ -201,6 +201,18 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
 
+            // Print observations not on best path (if best path exists)
+            if (bestPath != null && bestPath.isFound()) {
+                for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
+                    List<Boolean> snapNotOnRoutedPath = snapsNotOnRoutedPaths.get(observationsIndex);
+                    List<Snap> snaps = snapsPerObservationTmp.get(observationsIndex);
+                    // Check if this observation is not on the best path specifically
+                    if (observationsIndex < snapNotOnRoutedPath.size() && snapNotOnRoutedPath.get(bestPathIndex) && !snaps.isEmpty()) {
+                        System.out.println("Observation not on best path #" + (bestPathIndex + 1) + ": " + snapsPerObservationTmp.get(observationsIndex).get(0).getQueryPoint());
+                    }
+                }
+            }
+
             // When not forcing and some snaps are not on any path, try routing via the off-path points
             if (anySnapNotOnAnyRoutedPath && bestPath != null && !forceInitialRouting) {
                 // Rebuild off-path indices relative to the BEST path (not "any path")
@@ -240,11 +252,32 @@ public class RailwayMapMatching extends MapMatching {
                 System.out.println("Via-waypoint routing: found " + offPathSegments.size() + " contiguous off-path segment(s)");
                 for (int segNum = 0; segNum < offPathSegments.size(); segNum++) {
                     List<Integer> seg = offPathSegments.get(segNum);
-                    int anchorBefore = seg.get(0) - 1;
-                    int anchorAfter = seg.get(seg.size() - 1) + 1;
-                    System.out.println("  Segment " + segNum + ": off-path obs " + filteredObservations.get(seg.get(0)).getPoint().index + "-" + filteredObservations.get(seg.get(seg.size() - 1)).getPoint().index +
-                            " (anchor before: obs " + (anchorBefore >= 0 ? filteredObservations.get(anchorBefore).getPoint().index : "NONE") +
-                            ", anchor after: obs " + (anchorAfter < totalObs ? filteredObservations.get(anchorAfter).getPoint().index : "NONE") + ")");
+                    int firstObsOriginalIdx = filteredObservations.get(seg.get(0)).getPoint().index;
+                    int lastObsOriginalIdx = filteredObservations.get(seg.get(seg.size() - 1)).getPoint().index;
+                    
+                    // Find anchor before and after using original observation indices
+                    Integer anchorBeforeOriginalIdx = null;
+                    Integer anchorAfterOriginalIdx = null;
+                    
+                    // Look for the closest on-path observation before this segment
+                    for (int i = seg.get(0) - 1; i >= 0; i--) {
+                        if (!offPathSet.contains(i)) {
+                            anchorBeforeOriginalIdx = filteredObservations.get(i).getPoint().index;
+                            break;
+                        }
+                    }
+                    
+                    // Look for the closest on-path observation after this segment  
+                    for (int i = seg.get(seg.size() - 1) + 1; i < filteredObservations.size(); i++) {
+                        if (!offPathSet.contains(i)) {
+                            anchorAfterOriginalIdx = filteredObservations.get(i).getPoint().index;
+                            break;
+                        }
+                    }
+                    
+                    System.out.println("  Segment " + segNum + ": off-path obs " + firstObsOriginalIdx + "-" + lastObsOriginalIdx +
+                            " (anchor before: obs " + (anchorBeforeOriginalIdx != null ? anchorBeforeOriginalIdx : "NONE") +
+                            ", anchor after: obs " + (anchorAfterOriginalIdx != null ? anchorAfterOriginalIdx : "NONE") + ")");
                 }
 
                 // Build waypoint lists for each segment: [anchorBefore, offPath1, ..., offPathN, anchorAfter]
@@ -255,22 +288,36 @@ public class RailwayMapMatching extends MapMatching {
                     List<Integer> seg = offPathSegments.get(segNum);
                     List<Integer> waypoints = new ArrayList<>();
 
-                    // Add anchor before (last on-path obs before segment)
-                    int anchorBefore = seg.get(0) - 1;
-                    if (anchorBefore >= 0) {
-                        waypoints.add(anchorBefore);
+                    // Add anchor before (last on-path obs before segment) - use original observation index
+                    Integer anchorBeforeOriginalIdx = null;
+                    for (int i = seg.get(0) - 1; i >= 0; i--) {
+                        if (!offPathSet.contains(i)) {
+                            anchorBeforeOriginalIdx = filteredObservations.get(i).getPoint().index;
+                            break;
+                        }
+                    }
+                    if (anchorBeforeOriginalIdx != null) {
+                        waypoints.add(anchorBeforeOriginalIdx);
                     } else {
                         // First observation is off-path, use it as its own start
                         System.out.println("  Segment " + segNum + ": no on-path anchor before, first obs is off-path");
                     }
 
-                    // Add all off-path observations in this segment
-                    waypoints.addAll(seg);
+                    // Add all off-path observations in this segment - use original observation indices
+                    for (int offPathIdx : seg) {
+                        waypoints.add(filteredObservations.get(offPathIdx).getPoint().index);
+                    }
 
-                    // Add anchor after (first on-path obs after segment)
-                    int anchorAfter = seg.get(seg.size() - 1) + 1;
-                    if (anchorAfter < totalObs) {
-                        waypoints.add(anchorAfter);
+                    // Add anchor after (first on-path obs after segment) - use original observation index
+                    Integer anchorAfterOriginalIdx = null;
+                    for (int i = seg.get(seg.size() - 1) + 1; i < filteredObservations.size(); i++) {
+                        if (!offPathSet.contains(i)) {
+                            anchorAfterOriginalIdx = filteredObservations.get(i).getPoint().index;
+                            break;
+                        }
+                    }
+                    if (anchorAfterOriginalIdx != null) {
+                        waypoints.add(anchorAfterOriginalIdx);
                     } else {
                         // Last observation is off-path, use it as its own end
                         System.out.println("  Segment " + segNum + ": no on-path anchor after, last obs is off-path");
@@ -370,8 +417,9 @@ public class RailwayMapMatching extends MapMatching {
                                     " (" + toCandidates.size() + " snap candidates)");
 
                             // Calculate the direct distance between the two observations to use as a baseline for a "suitable" path
-                            GHPoint fromPoint = filteredObservations.get(fromObsIdx).getPoint();
-                            GHPoint toPoint = filteredObservations.get(toObsIdx).getPoint();
+                            // Use the snap candidate coordinates since fromObsIdx/toObsIdx are now original indices
+                            GHPoint fromPoint = fromCandidates.get(0).getQueryPoint();
+                            GHPoint toPoint = toCandidates.get(0).getQueryPoint();
                             double directDistance = DistanceCalcEarth.DIST_EARTH.calcDist(
                                     fromPoint.lat, fromPoint.lon, toPoint.lat, toPoint.lon);
                             // Define "suitable" as path distance <= direct distance * 2.0 (allowing for some detour)

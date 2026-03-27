@@ -127,6 +127,20 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
 - **Impact**: Prevents routing from taking unreasonable detours while still allowing necessary railway network deviations
 - **Behavior**: When excessive detours are detected, via-waypoint routing falls back to default matching
 
+### Indexing Consistency Fix (March 27, 2026)
+- **Problem**: Mismatch between segment and anchor indices in via-waypoint routing logs caused confusion
+- **Root cause**: Mixed use of filtered list positions (0-based) vs original observation indices from GPX data
+- **Symptoms**: 
+  - Segment logs showed "Segment 0: off-path obs 46-46 (anchor before: obs 45, anchor after: obs 47)"
+  - Individual observation logs showed "Obs 41 [ON-PATH anchor], Obs 42 [OFF-PATH], Obs 43 [ON-PATH anchor]"
+  - Waypoint routing showed different indices: "routing through 3 waypoints (obs indices: 45 -> 46 -> 47)"
+- **Solution**:
+  - **Segment logging**: Modified anchor calculation to find actual on-path observations and use their original indices
+  - **Waypoint construction**: Updated waypoint lists to use original observation indices consistently
+  - **Leg routing**: Fixed coordinate access to use snap candidate query points instead of filtered list positions
+- **Result**: All via-waypoint routing logs now use consistent original observation indices
+- **Impact**: Eliminates confusing index mismatches and makes debugging much easier
+
 ## Benefits
 1. **Better path quality**: GeoJSON output is more accurate and reasonable
 2. **Performance**: Faster processing by avoiding expensive Viterbi computation
