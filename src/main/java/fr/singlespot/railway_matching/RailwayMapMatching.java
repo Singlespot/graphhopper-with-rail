@@ -426,8 +426,8 @@ public class RailwayMapMatching extends MapMatching {
                                 if (suitablePathFound) break;
                             }
 
-                            if (bestLegPath == null) {
-                                System.out.println("    -> FAILED: no path found (tried " +
+                            if (!suitablePathFound) {
+                                System.out.println("    -> FAILED: no suitable path found (tried " +
                                         fromCandidates.size() + " from × " + toCandidates.size() + " to snap combinations)");
                                 allSegmentsRouted = false;
                                 break;
