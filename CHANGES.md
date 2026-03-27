@@ -154,3 +154,18 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
 - Viterbi remains as a fallback for cases where via-waypoint routing fails
 - All existing functionality is preserved with improved quality
 - Test suite passes without modification except for enhanced validation
+
+### Cross-Query-Graph Path Merging Enhancement (March 27, 2026)
+- **Problem**: Path merging between different query graphs could fail due to incompatible virtual edge references
+- **Root cause**: Each QueryGraph creates its own virtual nodes and edges with different IDs
+- **Solution implemented at lines 489-571**:
+  - **Real edge conversion**: Both bestPath and routed segment edges are converted to real edges using `resolveToRealEdge()`
+  - **Real edge ID mapping**: The `bestPathEdgeIdToIndex` map now uses consistent real edge IDs instead of virtual edge IDs
+  - **Enhanced anchor finding**: Anchor detection now uses real edge IDs when matching snaps to path edges
+  - **Robust merged path construction**: Final merged path built from real `EdgeIteratorState` objects
+- **Key benefits**:
+  - **Cross-query-graph compatibility**: Real edge IDs are consistent across different QueryGraph instances
+  - **Eliminates virtual node issues**: No more dependency on graph-specific virtual references
+  - **Cleaner edge splicing**: Works with actual graph edges rather than virtual constructs
+  - **Maintains existing optimization**: Preserves the via-waypoint routing bypass-Viterbi behavior
+- **Impact**: Makes path merging more reliable when working with multiple query graphs while maintaining all existing functionality
