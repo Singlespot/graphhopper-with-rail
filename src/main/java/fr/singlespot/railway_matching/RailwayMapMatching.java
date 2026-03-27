@@ -29,21 +29,6 @@ public class RailwayMapMatching extends MapMatching {
     /**
      * This method does the actual map matching.
      * <p>
-     * It will throw an exception if a segment of the input list cannot be matched.
-     *
-     * @param observations the input list with GPX points which should match to edges
-     *                     of the graph specified in the constructor
-     * @param sw           The stopwatch
-     * @param routedPaths  The list of routed path between the first and last observation
-     */
-    public MatchResult match_with_routing(List<Observation> observations, StopWatch sw, List<Path> routedPaths,
-                                          boolean forceInitialRouting) {
-        return match_with_routing(observations, false, 0, sw, routedPaths, forceInitialRouting);
-    }
-
-    /**
-     * This method does the actual map matching.
-     * <p>
      * It will start at the provided index.
      *
      * @param observations The input list with GPX points which should match to edges
@@ -523,9 +508,6 @@ public class RailwayMapMatching extends MapMatching {
 
                         System.out.println("Via-waypoint routing: successfully routed detour segments. Total merged edges=" + mergedPath.size());
 
-                        // Create a proper MatchResult with observation states
-                        Weighting viaWeighting = router.getWeighting();
-
                         // Use bestPath directly but add observation states to its edges
                         List<EdgeMatch> edgeMatches = new ArrayList<>();
 
@@ -536,11 +518,24 @@ public class RailwayMapMatching extends MapMatching {
                             Snap bestSnap = null;
                             // Check both bestPathSnaps and routedPathSnaps
                             List<Snap> allCandidateSnaps = new ArrayList<>();
-                            if (obsIdx < bestPathSnaps.size() && !bestPathSnaps.get(obsIdx).isEmpty()) {
-                                allCandidateSnaps.addAll(bestPathSnaps.get(obsIdx));
+                            
+                            // Find the filtered observation index that matches this observation
+                            int filteredObsIdx = -1;
+                            for (int j = 0; j < filteredObservations.size(); j++) {
+                                if (filteredObservations.get(j).getPoint().index == obsIdx) {
+                                    filteredObsIdx = j;
+                                    break;
+                                }
                             }
-                            if (obsIdx < routedPathSnaps.size() && !routedPathSnaps.get(obsIdx).isEmpty()) {
-                                allCandidateSnaps.addAll(routedPathSnaps.get(obsIdx));
+                            
+                            // Check both bestPathSnaps and routedPathSnaps using the correct filtered index
+                            if (filteredObsIdx >= 0) {
+                                if (filteredObsIdx < bestPathSnaps.size() && !bestPathSnaps.get(filteredObsIdx).isEmpty()) {
+                                    allCandidateSnaps.addAll(bestPathSnaps.get(filteredObsIdx));
+                                }
+                                if (filteredObsIdx < routedPathSnaps.size() && !routedPathSnaps.get(filteredObsIdx).isEmpty()) {
+                                    allCandidateSnaps.addAll(routedPathSnaps.get(filteredObsIdx));
+                                }
                             }
 
                             if (!allCandidateSnaps.isEmpty()) {
@@ -628,7 +623,8 @@ public class RailwayMapMatching extends MapMatching {
                         StringBuilder geoJson = new StringBuilder();
                         geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
                         boolean first = true;
-                        for (EdgeIteratorState edge : bestPathEdges) {
+                        // Use mergedPath instead of bestPathEdges to include via-waypoint routing segments
+                        for (EdgeIteratorState edge : mergedPath) {
                             PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
                             for (int i = 0; i < edgePoints.size(); i++) {
                                 if (!first) geoJson.append(",");
@@ -637,7 +633,7 @@ public class RailwayMapMatching extends MapMatching {
                             }
                         }
                         geoJson.append("]},\"properties\":{\"stroke\":\"#ff0000\",\"path_type\":\"via_waypoint_bypass\"")
-                                .append(",\"edges\":").append(bestPathEdges.size())
+                                .append(",\"edges\":").append(mergedPath.size())
                                 .append(",\"distance\":").append(bestPath.getDistance())
                                 .append(",\"observations\":").append(observations.size())
                                 .append(",\"edge_matches_with_states\":").append(edgeMatches.stream().mapToInt(em -> em.getStates().size()).sum())

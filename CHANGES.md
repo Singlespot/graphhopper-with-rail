@@ -94,6 +94,23 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
 - **Result**: Eliminated all "Could not find snap point" messages and ensured perfect alignment between snapped points and path geometry
 - **Impact**: Observation indexes now correctly correspond to original GPX observation positions with no coordinate mismatches
 
+### Edge-to-Observations Mapping Fix (March 27, 2026)
+- **Problem**: Only 8 observations were getting states assigned in via-waypoint routing, leaving a massive gap from observation index 2 to 81
+- **Root cause**: The `edgeToObservations` mapping was only checking `bestPathSnaps` using original observation indices, but needed to check both `bestPathSnaps` and `routedPathSnaps` using filtered observation indices
+- **Solution**: 
+  - Added proper filtered observation index lookup for each original observation
+  - Modified the mapping to include snaps from both `bestPathSnaps` and `routedPathSnaps`
+  - Ensured observations from via-waypoint routing are properly included in the edge-to-observations mapping
+- **Result**: Increased from 8 to 112 observations with states assigned, eliminating the gap issue
+
+### GeoJSON Path Visualization Fix (March 27, 2026)
+- **Problem**: Observation 80 was in `routedPathSnaps` but not appearing in the GeoJSON path visualization
+- **Root cause**: GeoJSON was using `bestPathEdges` instead of the `mergedPath` that includes via-waypoint routing segments
+- **Solution**: 
+  - Changed GeoJSON generation to use `mergedPath` instead of `bestPathEdges`
+  - Updated edge count in properties to reflect the merged path size (increased from 1247 to 1554 edges)
+- **Impact**: GeoJSON now accurately represents the complete path including all detour segments from via-waypoint routing
+
 ### Snap Lookup Optimization (March 25, 2026)
 - **Eliminated redundant filtered position lookup**: Removed unnecessary nested loops that searched through filteredObservations to find filtered positions
 - **Direct snap index matching**: Now uses snap.getQueryPoint().index to directly match snaps with their original observation indices
@@ -102,6 +119,13 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
   - Via-waypoint waypoint processing (lines 284-296)
 - **Benefits**: Improved performance, better readability, and more maintainable code
 - **Test verification**: testFullGPXTrackMatching passes with 77 observation indexes generated successfully
+
+### Detour Prevention Improvements (March 27, 2026)
+- **Reduced distance threshold**: Changed from 2.0x to 1.5x direct distance for acceptable routing paths
+- **Added maximum detour limit**: Paths exceeding 3.0x direct distance are rejected as excessive detours
+- **Enhanced warning system**: Added detailed logging showing direct distance, path distance, and ratio
+- **Impact**: Prevents routing from taking unreasonable detours while still allowing necessary railway network deviations
+- **Behavior**: When excessive detours are detected, via-waypoint routing falls back to default matching
 
 ## Benefits
 1. **Better path quality**: GeoJSON output is more accurate and reasonable
