@@ -264,6 +264,7 @@ public class MatchResource {
 
     /**
      * Route between two points and return result as a path.
+     * Uses its own QueryGraph (for gap-filling, not initial routing).
      */
     private List<RoutedPath> routeGap(GHRequest request, boolean initialRoute) {
         // Copied from com.graphhopper.routing.Router.route
@@ -297,6 +298,42 @@ public class MatchResource {
         // (base) query graph used to resolve headings, curbsides etc. this is not necessarily the same thing as
         // the (possibly implementation specific) query graph used by PathCalculator
         QueryGraph queryGraph = QueryGraph.create(hopper.getBaseGraph(), filteredSnapsList.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+        return routeOnQueryGraph(request, solver, queryGraph, filteredSnapsList);
+    }
+
+    /**
+     * Route between first and last observation on the unified QueryGraph.
+     * The snaps come from the map matching preparation so all routing happens
+     * on the same graph used for matching — eliminating cross-graph edge issues.
+     */
+    private List<RoutedPath> routeGapOnUnifiedGraph(GHRequest request,
+                                                     QueryGraph unifiedQueryGraph,
+                                                     List<Snap> firstSnaps,
+                                                     List<Snap> lastSnaps) {
+        if (request.getPoints().size() > 2) {
+            throw new IllegalArgumentException("Route request with vias are not supported for gap routing.");
+        }
+        Router router = hopper.createRouter();
+        Solver solver = router.createSolver(request);
+        solver.init();
+
+        // Filter snaps by unique edge name/ref (same logic as original routeGap)
+        List<Snap> filteredFirst = new SnapListEdgesFilter(firstSnaps, hopper).getFilteredList();
+        List<Snap> filteredLast = new SnapListEdgesFilter(lastSnaps, hopper).getFilteredList();
+        List<List<Snap>> filteredSnapsList = Arrays.asList(filteredFirst, filteredLast);
+
+        System.out.println("Routing on unified QueryGraph: " + filteredFirst.size() +
+                " first snaps x " + filteredLast.size() + " last snaps");
+
+        return routeOnQueryGraph(request, solver, unifiedQueryGraph, filteredSnapsList);
+    }
+
+    /**
+     * Shared routing logic: route between snap combinations on the given QueryGraph.
+     */
+    private List<RoutedPath> routeOnQueryGraph(GHRequest request, Solver solver,
+                                                QueryGraph queryGraph,
+                                                List<List<Snap>> filteredSnapsList) {
         PathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
         boolean passThrough = false;
         boolean forceCurbsides = false;
@@ -421,12 +458,16 @@ public class MatchResource {
                 throw new IllegalArgumentException("input contains less than two points");
             }
             List<MatchResult> matchResultsList = new ArrayList<MatchResult>(2);
-            // route between first and last point
-            List<GHPoint> routing_points = new ArrayList<GHPoint>();
+
+            // Prepare the unified QueryGraph from all observation snaps FIRST,
+            // then route on it so bestPath and via-waypoint paths share the same graph.
+            QueryGraph unifiedQueryGraph = mapMatching.prepareQueryGraph(inputGPXEntries, 0);
+
             List<Path> routedPaths = new ArrayList<Path>(Collections.singletonList(null));
             if (profile.equals("all_tracks") && (useInitialRouting || forceInitialRouting)) {
                 GHPoint start_gh_point = inputGPXEntries.get(0).getPoint();
                 GHPoint end_gh_point = inputGPXEntries.get(inputGPXEntries.size() - 1).getPoint();
+                List<GHPoint> routing_points = new ArrayList<GHPoint>();
                 routing_points.add(start_gh_point);
                 routing_points.add(end_gh_point);
                 GHRequest routing_request = new GHRequest(routing_points);
@@ -437,16 +478,18 @@ public class MatchResource {
                         getHints().
                         putObject(CALC_POINTS, calcPoints).
                         putObject(INSTRUCTIONS, instructions);
-                //        TODO if we want to implement alternate routes
                 if (true) {
                     routing_request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE).
                             getHints().
                             putObject("alternative_route.max_paths", 8).
                             putObject("alternative_route.max_share_factor", 1);
                 }
-                System.out.println("Routing between " + start_gh_point + " and " + end_gh_point);
-                routedPaths = routeGap(routing_request, true).stream().map(rp -> rp.path).collect(Collectors.toList());
-                System.out.println("Found " + routedPaths.size() + " initial routes");
+                System.out.println("Routing between " + start_gh_point + " and " + end_gh_point + " on unified QueryGraph");
+                // Route on the unified QueryGraph using observation snaps for first/last points
+                routedPaths = routeGapOnUnifiedGraph(routing_request, unifiedQueryGraph,
+                        mapMatching.getFirstObservationSnaps(), mapMatching.getLastObservationSnaps())
+                        .stream().map(rp -> rp.path).collect(Collectors.toList());
+                System.out.println("Found " + routedPaths.size() + " initial routes on unified QueryGraph");
             }
 
             // Offset from start of the input points

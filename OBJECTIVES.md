@@ -11,16 +11,12 @@
    - No unnecessary loops or detours
    - Must follow the railway network topology efficiently
 
+## Relevant test
+- `testFullGPXTrackMatching` in RailwayMapMatchingTest.java
+
 ## Implementation Strategies
 
-### Option 1: Viterbi with Pre-routed Snaps
-- Use via-waypoint routing to find optimal snaps for off-path observations
-- Feed these pre-routed snaps to Viterbi algorithm
-- Let Viterbi find the optimal sequence through all snaps
-- **Pros**: Guaranteed optimal path, handles all observations
-- **Cons**: Can be slow with many observations (timeout issue)
-
-### Option 2: Direct Path Merging
+### Direct Path Merging
 - Build bestPath for observations that are already on a good route
 - Route individual segments for off-path observations
 - Merge bestPath with routed segments directly

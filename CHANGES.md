@@ -169,3 +169,26 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
   - **Cleaner edge splicing**: Works with actual graph edges rather than virtual constructs
   - **Maintains existing optimization**: Preserves the via-waypoint routing bypass-Viterbi behavior
 - **Impact**: Makes path merging more reliable when working with multiple query graphs while maintaining all existing functionality
+
+### PathMerger Discontinuity Fixes (March 30, 2026)
+- **Problem**: IllegalStateException "Edge X not found with adjNode Y" and merged path discontinuity warnings
+- **Root cause**: Discontinuities in merged paths when splicing routed segments with bestPath
+- **Solution implemented**:
+  - **Unified QueryGraph**: Single queryGraph instance used for all routing and merging operations
+  - **Node-based splicing**: Rewrote buildMergedEdgeList to align on common nodes rather than edges
+  - **Walk-back/forward splice**: When segment boundaries don't align, walk back/forward from anchors to find suitable splice points
+  - **Unspliceable segment handling**: Segments that cannot be spliced are excluded from merge, bestPath continues as-is
+  - **Intra-segment chaining**: Chain consecutive legs within segments using the same snap for continuity
+  - **Fallback logic**: If chaining fails, fall back to all candidates to prevent routing failures
+  - **Intra-segment bridges**: Short bridges between legs when fallback snaps differ
+  - **Distance caps**: 20km maximum for both segment boundary bridges and intra-segment bridges
+  - **Segment exclusion**: When intra-bridge fails, mark entire segment as unspliceable to avoid discontinuities
+- **Key locations**:
+  - Lines 489-716: Via-waypoint routing with splicing logic
+  - Lines 872-1000: buildMergedEdgeList with node-based merging
+- **Benefits**:
+  - **No more IllegalStateExceptions**: All paths are continuous and valid
+  - **Better path quality**: Avoids excessive detours (>365km) with distance capping
+  - **Robust handling**: Gracefully handles unspliceable segments without breaking the merge
+  - **Clean output**: Removed verbose diagnostic logging after stabilization
+- **Test results**: testFullGPXTrackMatching passes with no discontinuities or warnings
