@@ -1349,13 +1349,46 @@ public class RailwayMapMatchingTest {
             </gpx>
             """;
 
-    @BeforeEach
-    public void setUp() {
-        // Note: This is a minimal setup for testing purposes
-        // In a real test environment, you would need to initialize GraphHopper
-        // with actual railway data and proper configuration
-        // For this example, we'll create a mock setup that demonstrates the test structure
-    }
+    private static final String GPX_Ligne3 = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+              <trk>
+                <trkseg>
+                  <trkpt lat="48.873651728517984" lon="2.32728377836915">
+                    <time>2024-07-09T11:22:36+02:00</time>
+                    <extensions>
+                      <gpxtpx:accuracy>810</gpxtpx:accuracy>
+                    </extensions>
+                  </trkpt>
+                  <trkpt lat="48.87456665092364" lon="2.324190809183733">
+                    <time>2024-07-09T11:24:20+02:00</time>
+                    <extensions>
+                      <gpxtpx:accuracy>810</gpxtpx:accuracy>
+                    </extensions>
+                  </trkpt>
+                  <trkpt lat="48.87653477962411" lon="2.324384434372945">
+                    <time>2024-07-09T11:26:26+02:00</time>
+                    <extensions>
+                      <gpxtpx:accuracy>810</gpxtpx:accuracy>
+                    </extensions>
+                  </trkpt>
+                  <trkpt lat="48.87883973418161" lon="2.3214869087373415">
+                    <time>2024-07-09T11:28:36+02:00</time>
+                    <extensions>
+                      <gpxtpx:accuracy>810</gpxtpx:accuracy>
+                    </extensions>
+                  </trkpt>
+                  <trkpt lat="48.88090251254795" lon="2.3149873711843725">
+                    <time>2024-07-09T11:29:40+02:00</time>
+                    <extensions>
+                      <gpxtpx:accuracy>810</gpxtpx:accuracy>
+                    </extensions>
+                  </trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+            """;
+
 
     /**
      * Test map matching with full GPX track data
@@ -1371,6 +1404,14 @@ public class RailwayMapMatchingTest {
     @Test
     public void testGPXDataAllPointsOnRoutedPaths() {
         runGPXTrackMatchingTest(GPX_DATA_ALL_POINTS_ON_ROUTED_PATHS, "GPX_DATA_ALL_POINTS_ON_ROUTED_PATHS");
+    }
+
+    /**
+     * Test map matching for metro line 3 trace
+     */
+    @Test
+    public void testGPXDataLigne3() {
+        runGPXTrackMatchingTest(GPX_Ligne3, "GPX_Ligne3");
     }
 
     /**
