@@ -192,3 +192,69 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
   - **Robust handling**: Gracefully handles unspliceable segments without breaking the merge
   - **Clean output**: Removed verbose diagnostic logging after stabilization
 - **Test results**: testFullGPXTrackMatching passes with no discontinuities or warnings
+
+## Code Refactoring (April 1, 2026)
+
+### match_with_routing Method Cleanup
+- **Problem**: The `match_with_routing` method had become overly complex and difficult to maintain with ~800+ lines
+- **Solution**: Refactored the method into a clean 3-case logic flow with extracted helper methods
+
+#### New 3-Case Logic Structure
+1. **Case 1 - Direct Path**: All observations are on a single routed path
+   - Uses the path directly without additional processing
+   - Bypasses Viterbi algorithm for efficiency
+   
+2. **Case 2 - Via-Waypoint Routing**: Best path exists but some observations are off-path
+   - Attempts to route detour segments through off-path observations
+   - If successful, returns merged path (bestPath + detours) bypassing Viterbi
+   - If failed, falls back to Case 3
+   
+3. **Case 3 - Viterbi Algorithm**: Fallback when no routed paths or via-waypoint fails
+   - Traditional map matching using Viterbi algorithm
+   - Handles all edge cases and complex scenarios
+
+#### Extracted Helper Methods
+
+1. **analyzeRoutedPaths()** (lines 1128-1222)
+   - Analyzes all routed paths to find the best path
+   - Checks if any path contains all observations (Case 1)
+   - Returns PathAnalysisResult with metadata for decision making
+   
+2. **attemptViaWaypointRouting()** (lines 1227-1298)
+   - Handles Case 2 logic for via-waypoint routing
+   - Calls performViaWaypointRouting() for the actual routing
+   - Builds and returns MatchResult if successful
+   
+3. **performViaWaypointRouting()** (lines 1321-1566)
+   - Core via-waypoint routing implementation
+   - Identifies off-path segments and routes detours
+   - Handles walk-back splice logic for connecting segments
+   - Returns ViaWaypointRoutingResult with routing data
+
+#### New Data Structures
+
+1. **PathAnalysisResult** (lines 1106-1123)
+   - Container for path analysis results
+   - Includes best path, direct path, and associated snaps
+   
+2. **ViaWaypointRoutingResult** (lines 1303-1316)
+   - Result container for via-waypoint routing operations
+   - Includes success status and routing data
+
+#### Benefits
+- **Readability**: Clear separation of concerns with descriptive method names
+- **Maintainability**: Each case is isolated and easier to modify
+- **Testability**: Helper methods can be tested independently
+- **DRY Principle**: Eliminated code duplication
+- **Performance**: Early returns avoid unnecessary processing
+
+#### Code Metrics
+- **Before**: 800+ line monolithic method
+- **After**: 200 line main method + 4 focused helper methods
+- **Complexity**: Reduced from nested loops to clear case-based flow
+- **Documentation**: Added comprehensive JavaDoc for all new methods
+
+#### Test Verification
+- All existing tests pass without modification
+- testFullGPXTrackMatching: Passes in ~2.5 minutes
+- No functional changes - only code structure improvements
