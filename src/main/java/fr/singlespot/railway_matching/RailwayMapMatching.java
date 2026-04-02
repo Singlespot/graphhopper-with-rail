@@ -98,11 +98,8 @@ public class RailwayMapMatching extends MapMatching {
     public MatchResult match_with_routing(List<Observation> observations, boolean ignoreErrors, int offset, StopWatch sw,
                                           List<Path> routedPaths, boolean forceInitialRouting) {
         this.offset = offset;
-        boolean usedDirectRouting = false;
-        boolean forcedDirectRouting = false;
         resetCounters(observations.size(), offset);
-        List<Observation> observationSubList = observations.subList(offset, observations.size());
-        List<Observation> filteredObservations = filterObservations(observationSubList);
+        List<Observation> filteredObservations = filterObservations(observations.subList(offset, observations.size()));
         statistics.put("filteredObservations", filteredObservations.size());
 
         // Snap observations to links. Generates multiple candidate snaps per observation.
@@ -146,7 +143,6 @@ public class RailwayMapMatching extends MapMatching {
                 System.out.println("Case 1: All observations on direct path - using direct routing");
                 routedPath = pathAnalysis.directPath;
                 snapsPerObservationOnRoutedPath = pathAnalysis.directPathSnaps;
-                usedDirectRouting = true;
                 statistics.put("usedDirectRouting", true);
                 statistics.put("forcedDirectRouting", false);
             }
@@ -182,7 +178,6 @@ public class RailwayMapMatching extends MapMatching {
                 System.out.println("Forced routing - using best path");
                 routedPath = pathAnalysis.bestPath;
                 snapsPerObservationOnRoutedPath = pathAnalysis.bestPathSnaps;
-                forcedDirectRouting = true;
                 statistics.put("usedDirectRouting", false);
                 statistics.put("forcedDirectRouting", true);
                 
