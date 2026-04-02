@@ -10,6 +10,7 @@ import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.storage.index.Snap;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -637,8 +638,7 @@ public class RailwayMapMatching extends MapMatching {
             if (allSnapsOnRoutedPath && !forceInitialRouting &&
                     (pathEdgeIndices.size() > 2 || filteredObservations.size() == 2)) {
                 directPath = tmpRoutedPath;
-                directPathSnaps = new ArrayList<>();
-                directPathSnaps.addAll(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
+                directPathSnaps = new ArrayList<>(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
                 hasDirectPath = true;
                 System.out.println("All observations on the path #" + (finalRoutedPathsIndex + 1) + ": using direct routing for map matching");
                 break;
@@ -665,6 +665,15 @@ public class RailwayMapMatching extends MapMatching {
         }
 
         return new PathAnalysisResult(bestPath, bestPathIndex, bestPathSnaps, hasDirectPath, directPath, directPathSnaps);
+    }
+
+    /**
+     * Check if the processing time limit has been exceeded and throw an exception if so.
+     */
+    private void checkTimeLimit(StopWatch sw) {
+        if (sw.getCurrentSeconds() >= maxProcessingTimeSeconds) {
+            throw new IllegalArgumentException("Time limit of " + maxProcessingTimeSeconds + "s exceeded.");
+        }
     }
 
     /**
@@ -698,9 +707,9 @@ public class RailwayMapMatching extends MapMatching {
         // Build waypoint segments and attempt routing
         ViaWaypointRoutingResult routingResult = performViaWaypointRouting(
                 observationsNotOnBestPathIndices, filteredObservations, 
-                bestPath, bestPathSnaps, snapsPerObservationTmp);
+                bestPath, bestPathSnaps, snapsPerObservationTmp, sw);
         
-        if (routingResult == null || !routingResult.success) {
+        if (!routingResult.success) {
             System.out.println("Via-waypoint routing: failed, falling back to Viterbi");
             statistics.put("usedViaWaypointRouting", false);
             return null;
@@ -769,57 +778,19 @@ public class RailwayMapMatching extends MapMatching {
             List<Observation> filteredObservations,
             Path bestPath,
             List<List<Snap>> bestPathSnaps,
-            List<List<Snap>> snapsPerObservationTmp) {
+            List<List<Snap>> snapsPerObservationTmp,
+            StopWatch sw) {
         
         Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnBestPathIndices);
         
         // Identify contiguous off-path segments
-        List<List<Integer>> offPathSegments = new ArrayList<>();
-        List<Integer> currentSegment = null;
-        for (int idx : observationsNotOnBestPathIndices) {
-            if (currentSegment == null || idx != currentSegment.get(currentSegment.size() - 1) + 1) {
-                if (currentSegment != null) {
-                    offPathSegments.add(currentSegment);
-                }
-                currentSegment = new ArrayList<>();
-            }
-            currentSegment.add(idx);
-        }
-        if (currentSegment != null) {
-            offPathSegments.add(currentSegment);
-        }
-        
+        List<List<Integer>> offPathSegments = computeOffPathSegments(observationsNotOnBestPathIndices);
+
         System.out.println("Via-waypoint routing: found " + offPathSegments.size() + " contiguous off-path segment(s)");
         
         // Build waypoint lists for each segment
-        List<List<Integer>> segmentWaypointIndices = new ArrayList<>();
-        for (List<Integer> seg : offPathSegments) {
-            List<Integer> waypoints = new ArrayList<>();
-            
-            // Add anchor before
-            for (int i = seg.get(0) - 1; i >= 0; i--) {
-                if (!offPathSet.contains(i)) {
-                    waypoints.add(filteredObservations.get(i).getPoint().index);
-                    break;
-                }
-            }
-            
-            // Add off-path observations
-            for (int offPathIdx : seg) {
-                waypoints.add(filteredObservations.get(offPathIdx).getPoint().index);
-            }
-            
-            // Add anchor after
-            for (int i = seg.get(seg.size() - 1) + 1; i < filteredObservations.size(); i++) {
-                if (!offPathSet.contains(i)) {
-                    waypoints.add(filteredObservations.get(i).getPoint().index);
-                    break;
-                }
-            }
-            
-            segmentWaypointIndices.add(waypoints);
-        }
-        
+        List<List<Integer>> segmentWaypointIndices = buildWaypointsList(filteredObservations, offPathSegments, offPathSet);
+
         // Check waypoints have snaps
         Map<Integer, List<Snap>> waypointAllSnapsMap = new LinkedHashMap<>();
         for (List<Integer> waypoints : segmentWaypointIndices) {
@@ -870,6 +841,9 @@ public class RailwayMapMatching extends MapMatching {
         boolean allSegmentsRouted = true;
         
         for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
+            // Check if we're exceeding time limit
+            checkTimeLimit(sw);
+            
             List<Integer> waypoints = segmentWaypointIndices.get(segNum);
             List<EdgeIteratorState> segmentEdges = new ArrayList<>();
             int segmentStartNode = -1;
@@ -878,7 +852,10 @@ public class RailwayMapMatching extends MapMatching {
             Snap previousLegToSnap = null;
             boolean segmentSpliceable = true;
             
-            for (int wpIdx = 0; wpIdx < waypoints.size() - 1 && segmentSpliceable; wpIdx++) {
+            for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
+                // Check time limit in inner loop as well
+                checkTimeLimit(sw);
+                
                 int fromObsIdx = waypoints.get(wpIdx);
                 int toObsIdx = waypoints.get(wpIdx + 1);
                 List<Snap> allFromCandidates = waypointAllSnapsMap.get(fromObsIdx);
@@ -1088,5 +1065,56 @@ public class RailwayMapMatching extends MapMatching {
         }
         
         return new ViaWaypointRoutingResult(true, perSegmentRoutedEdges, segmentBoundaryNodes, routedPathSnaps);
+    }
+
+    @NotNull
+    private static List<List<Integer>> buildWaypointsList(List<Observation> filteredObservations, List<List<Integer>> offPathSegments, Set<Integer> offPathSet) {
+        List<List<Integer>> segmentWaypointIndices = new ArrayList<>();
+        for (List<Integer> seg : offPathSegments) {
+            List<Integer> waypoints = new ArrayList<>();
+
+            // Add anchor before
+            for (int i = seg.get(0) - 1; i >= 0; i--) {
+                if (!offPathSet.contains(i)) {
+                    waypoints.add(filteredObservations.get(i).getPoint().index);
+                    break;
+                }
+            }
+
+            // Add off-path observations
+            for (int offPathIdx : seg) {
+                waypoints.add(filteredObservations.get(offPathIdx).getPoint().index);
+            }
+
+            // Add anchor after
+            for (int i = seg.get(seg.size() - 1) + 1; i < filteredObservations.size(); i++) {
+                if (!offPathSet.contains(i)) {
+                    waypoints.add(filteredObservations.get(i).getPoint().index);
+                    break;
+                }
+            }
+
+            segmentWaypointIndices.add(waypoints);
+        }
+        return segmentWaypointIndices;
+    }
+
+    @NotNull
+    private static List<List<Integer>> computeOffPathSegments(List<Integer> observationsNotOnBestPathIndices) {
+        List<List<Integer>> offPathSegments = new ArrayList<>();
+        List<Integer> currentSegment = null;
+        for (int idx : observationsNotOnBestPathIndices) {
+            if (currentSegment == null || idx != currentSegment.get(currentSegment.size() - 1) + 1) {
+                if (currentSegment != null) {
+                    offPathSegments.add(currentSegment);
+                }
+                currentSegment = new ArrayList<>();
+            }
+            currentSegment.add(idx);
+        }
+        if (currentSegment != null) {
+            offPathSegments.add(currentSegment);
+        }
+        return offPathSegments;
     }
 }

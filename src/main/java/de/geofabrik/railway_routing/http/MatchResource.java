@@ -95,6 +95,7 @@ public class MatchResource {
                 }
             }
             this.snapList = new ArrayList<>(snapMap.values());
+            this.snapList.sort(Comparator.comparingDouble(Snap::getQueryDistance));
         }
 
         public List<Snap> getFilteredList() {
@@ -165,12 +166,12 @@ public class MatchResource {
             throw new IllegalArgumentException("GPX documents with multiple tracks not supported yet.");
         }
         List<Observation> observations = GpxConversions.getEntries(gpx.trk.get(0));
-        
+
         // Set proper observation indexes based on their order in the GPX track
         for (int i = 0; i < observations.size(); i++) {
             observations.get(i).getPoint().index = i;
         }
-        
+
         return observations;
     }
 
@@ -307,9 +308,9 @@ public class MatchResource {
      * on the same graph used for matching — eliminating cross-graph edge issues.
      */
     private List<RoutedPath> routeGapOnUnifiedGraph(GHRequest request,
-                                                     QueryGraph unifiedQueryGraph,
-                                                     List<Snap> firstSnaps,
-                                                     List<Snap> lastSnaps) {
+                                                    QueryGraph unifiedQueryGraph,
+                                                    List<Snap> firstSnaps,
+                                                    List<Snap> lastSnaps) {
         if (request.getPoints().size() > 2) {
             throw new IllegalArgumentException("Route request with vias are not supported for gap routing.");
         }
@@ -318,8 +319,8 @@ public class MatchResource {
         solver.init();
 
         // Filter snaps by unique edge name/ref (same logic as original routeGap)
-        List<Snap> filteredFirst = new SnapListEdgesFilter(firstSnaps, hopper).getFilteredList();
-        List<Snap> filteredLast = new SnapListEdgesFilter(lastSnaps, hopper).getFilteredList();
+        List<Snap> filteredFirst = new SnapListEdgesFilter(firstSnaps, hopper).getFilteredList().subList(0, 10);
+        List<Snap> filteredLast = new SnapListEdgesFilter(lastSnaps, hopper).getFilteredList().subList(0, 10);
         List<List<Snap>> filteredSnapsList = Arrays.asList(filteredFirst, filteredLast);
 
         System.out.println("Routing on unified QueryGraph: " + filteredFirst.size() +
@@ -332,8 +333,8 @@ public class MatchResource {
      * Shared routing logic: route between snap combinations on the given QueryGraph.
      */
     private List<RoutedPath> routeOnQueryGraph(GHRequest request, Solver solver,
-                                                QueryGraph queryGraph,
-                                                List<List<Snap>> filteredSnapsList) {
+                                               QueryGraph queryGraph,
+                                               List<List<Snap>> filteredSnapsList) {
         PathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
         boolean passThrough = false;
         boolean forceCurbsides = false;
@@ -357,7 +358,7 @@ public class MatchResource {
                 }
             }
         }
-        
+
         if (possiblePathsWithExtremities.isEmpty()) {
             System.out.println("No path found");
             return Collections.singletonList(new RoutedPath(null, null));
@@ -365,7 +366,7 @@ public class MatchResource {
             List<RoutedPath> possiblePaths;
 //            We want the shortest path possible for the snaps that are closest to their observations
             possiblePathsWithExtremities.sort(Comparator.comparingDouble(pwe -> (pwe.startSnap.getQueryDistance() + pwe.endSnap.getQueryDistance() + 1e-10) * pwe.path.path.getDistance()));
-            
+
             // Print all paths as a GeoJSON FeatureCollection with distinct stroke colors
 //            String[] colors = {"#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990"};
 //            StringBuilder fc = new StringBuilder();
@@ -389,7 +390,7 @@ public class MatchResource {
 //            }
 //            fc.append("]}");
 //            System.out.println("Paths GeoJSON: " + fc);
-            
+
             possiblePaths = possiblePathsWithExtremities.stream().map(pwe -> pwe.path).collect(Collectors.toList());
             return possiblePaths;
         }
@@ -612,17 +613,17 @@ public class MatchResource {
                             if (em.getStates().size() > 0) {
                                 for (State state : em.getStates()) {
                                     GHPoint point = state.getEntry().getPoint();
-                                    System.out.println("DEBUG: observation index"+ point.index);
+                                    System.out.println("DEBUG: observation index" + point.index);
                                     GHPoint3D snappedPoint = state.getSnap().getSnappedPoint();
-                                    System.out.println("DEBUG: snappedPoint index"+ state.getSnap().getQueryPoint().index);
+                                    System.out.println("DEBUG: snappedPoint index" + state.getSnap().getQueryPoint().index);
                                     int snappedEdgeStartPointIdx = responsePath.getPathDetails().get("edge_key").get(i).getFirst();
                                     int snappedEdgeLastPointIdx = responsePath.getPathDetails().get("edge_key").get(i).getLast();
                                     int bestCandidateIdx = -1;
                                     for (int j = snappedEdgeStartPointIdx; j <= snappedEdgeLastPointIdx; j++) {
                                         GHPoint3D candidate = responsePath.getPoints().get(j);
                                         // Use tolerance for coordinate comparison due to precision differences
-                                        if (Math.abs(candidate.getLat() - snappedPoint.getLat()) < 1e-7 && 
-                                            Math.abs(candidate.getLon() - snappedPoint.getLon()) < 1e-7) {
+                                        if (Math.abs(candidate.getLat() - snappedPoint.getLat()) < 1e-7 &&
+                                                Math.abs(candidate.getLon() - snappedPoint.getLon()) < 1e-7) {
                                             bestCandidateIdx = j;
                                             break;
                                         }
