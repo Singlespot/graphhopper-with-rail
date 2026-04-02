@@ -319,8 +319,12 @@ public class MatchResource {
         solver.init();
 
         // Filter snaps by unique edge name/ref (same logic as original routeGap)
-        List<Snap> filteredFirst = new SnapListEdgesFilter(firstSnaps, hopper).getFilteredList().subList(0, 10);
-        List<Snap> filteredLast = new SnapListEdgesFilter(lastSnaps, hopper).getFilteredList().subList(0, 10);
+        // Get first 10 snaps (or less if size is less than 10)
+        List<Snap> filteredFirst = new SnapListEdgesFilter(firstSnaps, hopper).getFilteredList();
+        List<Snap> filteredLast = new SnapListEdgesFilter(lastSnaps, hopper).getFilteredList();
+        
+        filteredFirst = filteredFirst.subList(0, Math.min(filteredFirst.size(), 10));
+        filteredLast = filteredLast.subList(0, Math.min(filteredLast.size(), 10));
         List<List<Snap>> filteredSnapsList = Arrays.asList(filteredFirst, filteredLast);
 
         System.out.println("Routing on unified QueryGraph: " + filteredFirst.size() +

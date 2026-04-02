@@ -123,6 +123,7 @@ public class RailwayMapMatching extends MapMatching {
         Path routedPath = null;
         boolean anySnapNotOnAnyRoutedPath = false;
         List<List<Snap>> snapsPerObservationOnRoutedPath = new ArrayList<>();
+        PathAnalysisResult pathAnalysis = null;
 
         // Check if there is at least one valid routed path
         if (routedPaths.get(0) != null && routedPaths.stream().anyMatch(Path::isFound)) {
@@ -135,7 +136,7 @@ public class RailwayMapMatching extends MapMatching {
             );
 
             // Analyze routed paths to find best path and check for direct path (case 1)
-            PathAnalysisResult pathAnalysis = analyzeRoutedPaths(
+            pathAnalysis = analyzeRoutedPaths(
                     routedPaths, filteredObservations, snapsPerObservationTmp, 
                     analysisResult, forceInitialRouting);
 
@@ -193,6 +194,60 @@ public class RailwayMapMatching extends MapMatching {
                     }
                 }
             }
+        }
+        
+        // If we have a direct path (Case 1), bypass Viterbi and create result directly
+        if (routedPath != null && pathAnalysis != null && pathAnalysis.hasDirectPath) {
+            System.out.println("Creating direct MatchResult bypassing Viterbi algorithm");
+            
+            // Build edge matches directly from the routed path
+            List<EdgeIteratorState> pathEdges = routedPath.calcEdges();
+            List<EdgeMatch> edgeMatches = buildEdgeMatchesForMergedPath(
+                    pathEdges, observations, filteredObservations,
+                    pathAnalysis.directPathSnaps, Collections.emptyList());
+            
+            // Create and return result
+            statistics.put("usedDirectRouting", true);
+            statistics.put("forcedDirectRouting", false);
+            statistics.put("usedViaWaypointRouting", false);
+            statistics.put("visitedNodes", router.getVisitedNodes());
+            statistics.put("snapsPerObservation", pathAnalysis.directPathSnaps.stream().mapToInt(Collection::size).toArray());
+            
+            processedUpTo = observations.size() - 1;
+            
+            Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
+            Path directMapMatchedPath = new MapMatchedPath(queryGraph, queryGraphWeighting, pathEdges);
+            
+            result = new MatchResult(edgeMatches);
+            result.setMergedPath(directMapMatchedPath);
+            result.setMatchMillis(directMapMatchedPath.getTime());
+            result.setMatchLength(directMapMatchedPath.getDistance());
+            result.setGPXEntriesLength(gpxLength(observations));
+            result.setGraph(queryGraph);
+            result.setWeighting(queryGraphWeighting);
+            
+            // Print final path as GeoJSON for debugging
+            if (!pathEdges.isEmpty()) {
+                StringBuilder geoJson = new StringBuilder();
+                geoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+                boolean first = true;
+                for (EdgeIteratorState edge : pathEdges) {
+                    PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
+                    for (int i = 0; i < edgePoints.size(); i++) {
+                        if (!first) geoJson.append(",");
+                        geoJson.append("[").append(edgePoints.getLon(i)).append(",").append(edgePoints.getLat(i)).append("]");
+                        first = false;
+                    }
+                }
+                geoJson.append("]},\"properties\":{\"stroke\":\"#00ff00\",\"path_type\":\"direct_bypass_viterbi\",\"edges\":")
+                        .append(pathEdges.size())
+                        .append(",\"distance\":")
+                        .append(directMapMatchedPath.getDistance())
+                        .append("}}");
+                System.out.println("Direct Path (bypassing Viterbi) GeoJSON: " + geoJson);
+            }
+            
+            return result;
         }
         
         // Case 3: Fall back to Viterbi algorithm
