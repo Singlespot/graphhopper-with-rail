@@ -13,11 +13,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1389,6 +1392,18 @@ public class RailwayMapMatchingTest {
             </gpx>
             """;
 
+    private static final String GPX_Paris_Cannes = readGPXFile("/home/laurent/IdeaProjects/graphhopper-with-rail/src/test/resources/GPX_Paris_Cannes.xml");
+
+    /**
+     * Read GPX file content as string
+     */
+    private static String readGPXFile(String filePath) {
+        try {
+            return Files.readString(Paths.get(filePath));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read GPX file: " + filePath, e);
+        }
+    }
 
     /**
      * Test map matching with full GPX track data
@@ -1412,6 +1427,14 @@ public class RailwayMapMatchingTest {
     @Test
     public void testGPXDataLigne3() {
         runGPXTrackMatchingTest(GPX_Ligne3, "GPX_Ligne3");
+    }
+
+    /**
+     * Test map matching for paris cannes
+     */
+    @Test
+    public void testGPXDataParisCannes() {
+        runGPXTrackMatchingTest(GPX_Paris_Cannes, "GPX_DATA_PARIS_CANNES");
     }
 
     /**

@@ -1,0 +1,2458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1"
+     creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+    <trk>
+        <trkseg>
+            <trkpt lat="48.843791411529004" lon="2.3758441307977125">
+                <time>2024-09-13T17:23:31+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>81</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.839968937893836" lon="2.384973407055132">
+                <time>2024-09-13T17:24:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>855</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.83942856104431" lon="2.3860982393774277">
+                <time>2024-09-13T17:24:56+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>936</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.839203647380444" lon="2.386546782440791">
+                <time>2024-09-13T17:25:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>976</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.83916543004691" lon="2.3866132950118204">
+                <time>2024-09-13T17:25:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>989</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.83660922104746" lon="2.3885129803538403">
+                <time>2024-09-13T17:25:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>992</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.83541281372486" lon="2.3893862281109612">
+                <time>2024-09-13T17:25:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>996</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.83506425058131" lon="2.389640641451252">
+                <time>2024-09-13T17:26:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1007</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.83494035878137" lon="2.3897310690459146">
+                <time>2024-09-13T17:26:22+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1035</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.8193877723743" lon="2.4142973666808305">
+                <time>2024-09-13T17:27:42+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1071</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.81731874420237" lon="2.414594169739765">
+                <time>2024-09-13T17:28:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1116</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.800119716639166" lon="2.4304328634736607">
+                <time>2024-09-13T17:28:54+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1174</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.796038889309884" lon="2.427524010980593">
+                <time>2024-09-13T17:29:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1209</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.7908159724708" lon="2.427379891685614">
+                <time>2024-09-13T17:29:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1230</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.78688111504292" lon="2.430481941003097">
+                <time>2024-09-13T17:29:36+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1269</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.780379238135225" lon="2.4368396181354193">
+                <time>2024-09-13T17:29:54+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1302</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.77621667015462" lon="2.436954032325266">
+                <time>2024-09-13T17:30:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1311</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.76705805942084" lon="2.4548208359794548">
+                <time>2024-09-13T17:30:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1358</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.76506946934391" lon="2.4603862110901615">
+                <time>2024-09-13T17:31:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1359</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.74553027838182" lon="2.476064997454737">
+                <time>2024-09-13T17:32:15+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1445</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.74533768379135" lon="2.4761840031561846">
+                <time>2024-09-13T17:32:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1446</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.745234313329384" lon="2.4762475010148144">
+                <time>2024-09-13T17:32:37+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1446</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.726844062392765" lon="2.539976993867506">
+                <time>2024-09-13T17:33:45+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1514</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.72670352816873" lon="2.540841597847083">
+                <time>2024-09-13T17:33:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1514</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.726646378878726" lon="2.54119319550336">
+                <time>2024-09-13T17:34:15+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1524</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.72662304760097" lon="2.54133673573941">
+                <time>2024-09-13T17:34:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1544</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.71984100823559" lon="2.5614191298039475">
+                <time>2024-09-13T17:35:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1584</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.70939014844297" lon="2.5990193984573233">
+                <time>2024-09-13T17:36:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1432</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.691800842017734" lon="2.6818914009714474">
+                <time>2024-09-13T17:37:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1631</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.69207968318147" lon="2.690806904658367">
+                <time>2024-09-13T17:37:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1688</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.69195164029627" lon="2.6923107800949286">
+                <time>2024-09-13T17:38:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1750</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.641826888393155" lon="2.7333085885277923">
+                <time>2024-09-13T17:39:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2003</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.56327563007075" lon="2.7600094913654543">
+                <time>2024-09-13T17:42:05+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.5480209600729" lon="2.777456498857209">
+                <time>2024-09-13T17:42:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.505417860627595" lon="2.8337548694422896">
+                <time>2024-09-13T17:43:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.50541348625708" lon="2.83375762028067">
+                <time>2024-09-13T17:44:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.46832559757788" lon="2.875204832974558">
+                <time>2024-09-13T17:45:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.430200497137506" lon="2.9233009814796502">
+                <time>2024-09-13T17:46:37+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.426675202450205" lon="2.932974431729554">
+                <time>2024-09-13T17:46:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2031</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.39669639066632" lon="2.9780115836300234">
+                <time>2024-09-13T17:48:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.37657865258104" lon="3.0683130730310286">
+                <time>2024-09-13T17:49:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2203</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.37643937371223" lon="3.068667137817891">
+                <time>2024-09-13T17:49:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2238</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.376312284579406" lon="3.0689902147290367">
+                <time>2024-09-13T17:49:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2274</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.34201007441422" lon="3.1829360626948366">
+                <time>2024-09-13T17:51:29+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2500</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.28577686797065" lon="3.236950449165186">
+                <time>2024-09-13T17:52:59+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2032</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.28560673460442" lon="3.2371681409906614">
+                <time>2024-09-13T17:53:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2068</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.22300585380731" lon="3.2825432142804933">
+                <time>2024-09-13T17:54:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2330</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.22262362923886" lon="3.282916245959529">
+                <time>2024-09-13T17:55:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2360</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.16484101962684" lon="3.3969466507019086">
+                <time>2024-09-13T17:56:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2569</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.164446961919374" lon="3.398949903808519">
+                <time>2024-09-13T17:56:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2582</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.14698513626583" lon="3.4265618665436723">
+                <time>2024-09-13T17:57:42+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2704</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.14127465534742" lon="3.4327475511569356">
+                <time>2024-09-13T17:58:05+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2754</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.0872244232416" lon="3.5126250894606903">
+                <time>2024-09-13T17:59:20+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2906</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.086832265017875" lon="3.5131845237949895">
+                <time>2024-09-13T17:59:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2931</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.08652827812495" lon="3.513617696762253">
+                <time>2024-09-13T17:59:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2976</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.08400218855884" lon="3.5240088955349615">
+                <time>2024-09-13T18:00:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2977</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.05398453889624" lon="3.5767533374961626">
+                <time>2024-09-13T18:00:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2015</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.05395953560188" lon="3.5767972485069666">
+                <time>2024-09-13T18:01:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2040</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.038063392641675" lon="3.5980619585473104">
+                <time>2024-09-13T18:01:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2131</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.004408477966344" lon="3.653956144635154">
+                <time>2024-09-13T18:02:46+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2278</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00401969826099" lon="3.6545867306298416">
+                <time>2024-09-13T18:03:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2318</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00380405687269" lon="3.6549364571951224">
+                <time>2024-09-13T18:03:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2349</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00351114262026" lon="3.655411504662723">
+                <time>2024-09-13T18:03:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2392</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00332732105114" lon="3.655709625939473">
+                <time>2024-09-13T18:03:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2413</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00321182863574" lon="3.6558969311969234">
+                <time>2024-09-13T18:03:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2444</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00311336262332" lon="3.6560566230844382">
+                <time>2024-09-13T18:04:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2475</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00300612711985" lon="3.656230537306555">
+                <time>2024-09-13T18:04:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2508</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00289571652106" lon="3.6564096008888716">
+                <time>2024-09-13T18:04:31+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2589</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.00283947595862" lon="3.6565008116665605">
+                <time>2024-09-13T18:04:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2619</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.0028394759532" lon="3.6565008116753455">
+                <time>2024-09-13T18:05:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2620</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="48.002839475952484" lon="3.6565008116765116">
+                <time>2024-09-13T18:05:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2620</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.97094347679537" lon="3.7113962482378513">
+                <time>2024-09-13T18:09:52+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2687</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.97092595110997" lon="3.7114264068569827">
+                <time>2024-09-13T18:10:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2703</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.970918745875665" lon="3.7114388057931555">
+                <time>2024-09-13T18:10:22+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2708</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.828067078209976" lon="3.9585225100990327">
+                <time>2024-09-13T18:11:12+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2738</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.8001962266702" lon="3.993696694255606">
+                <time>2024-09-13T18:12:18+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2075</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539414378" lon="3.9937374467131472">
+                <time>2024-09-13T18:12:32+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2084</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.8001653941377" lon="3.9937374467212057">
+                <time>2024-09-13T18:12:42+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2087</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539413249" lon="3.9937374467280775">
+                <time>2024-09-13T18:12:52+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2099</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539412435" lon="3.9937374467388342">
+                <time>2024-09-13T18:13:12+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2133</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539412075" lon="3.9937374467436">
+                <time>2024-09-13T18:13:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2147</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539411702" lon="3.993737446748517">
+                <time>2024-09-13T18:13:37+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2178</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539411373" lon="3.993737446752854">
+                <time>2024-09-13T18:13:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2218</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539411074" lon="3.993737446756805">
+                <time>2024-09-13T18:14:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2270</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.80016539410922" lon="3.9937374467588342">
+                <time>2024-09-13T18:14:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2303</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.71351819366679" lon="4.050032940184168">
+                <time>2024-09-13T18:16:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2452</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.71323047487373" lon="4.050219726365194">
+                <time>2024-09-13T18:16:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2480</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.71297193939237" lon="4.050387565942468">
+                <time>2024-09-13T18:16:54+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2508</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.712669159331206" lon="4.050584127522938">
+                <time>2024-09-13T18:17:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2543</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.71244039255586" lon="4.050732639686332">
+                <time>2024-09-13T18:17:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2577</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.666240575725496" lon="4.074707676265164">
+                <time>2024-09-13T18:18:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2684</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.666052816685074" lon="4.074818072089594">
+                <time>2024-09-13T18:18:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2703</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.665874733259194" lon="4.074922778620522">
+                <time>2024-09-13T18:18:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2744</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.665802413535395" lon="4.07496529986299">
+                <time>2024-09-13T18:18:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2767</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.5204804689207" lon="4.127132685355892">
+                <time>2024-09-13T18:20:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2906</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.51988955498283" lon="4.127333504660188">
+                <time>2024-09-13T18:20:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2918</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.519478922043476" lon="4.127473053951885">
+                <time>2024-09-13T18:20:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2944</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.432501832361844" lon="4.210368687851802">
+                <time>2024-09-13T18:22:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>3000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.33460052934694" lon="4.25800556147196">
+                <time>2024-09-13T18:25:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.33432740635292" lon="4.25810298610228">
+                <time>2024-09-13T18:25:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2024</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.33415745778454" lon="4.258151860112968">
+                <time>2024-09-13T18:25:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2068</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.33403405441349" lon="4.258187348487988">
+                <time>2024-09-13T18:25:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2095</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.33394914966521" lon="4.258211765375964">
+                <time>2024-09-13T18:26:05+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2130</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.27313834921575" lon="4.276714051315363">
+                <time>2024-09-13T18:26:45+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2244</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.271272624121224" lon="4.277281790444853">
+                <time>2024-09-13T18:26:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2277</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.2705093636578" lon="4.277514073272702">
+                <time>2024-09-13T18:27:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2309</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.27050936362284" lon="4.2775140732832755">
+                <time>2024-09-13T18:27:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2312</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.27050936357888" lon="4.277514073296576">
+                <time>2024-09-13T18:27:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2330</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.27050936355859" lon="4.277514073302716">
+                <time>2024-09-13T18:27:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2337</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.27050936353997" lon="4.277514073308349">
+                <time>2024-09-13T18:28:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2361</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.270509363522066" lon="4.277514073313765">
+                <time>2024-09-13T18:28:21+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2388</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.270509363505795" lon="4.27751407331869">
+                <time>2024-09-13T18:28:37+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2422</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="47.109231908111205" lon="4.365276347805804">
+                <time>2024-09-13T18:31:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2790</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.941539734329105" lon="4.490854040356972">
+                <time>2024-09-13T18:36:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2001</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.90626928202156" lon="4.48622552465923">
+                <time>2024-09-13T18:37:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2136</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.906012044238125" lon="4.486202258530705">
+                <time>2024-09-13T18:38:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2201</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.81095782615429" lon="4.490223899584048">
+                <time>2024-09-13T18:40:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2096</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80967196536447" lon="4.490485707832129">
+                <time>2024-09-13T18:40:35+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2112</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80942771033165" lon="4.490485019979221">
+                <time>2024-09-13T18:40:45+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2137</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.809187506633" lon="4.4904843435383635">
+                <time>2024-09-13T18:40:58+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2173</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808922328453214" lon="4.490483596770371">
+                <time>2024-09-13T18:41:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2216</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808780284140326" lon="4.490483196761235">
+                <time>2024-09-13T18:41:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2239</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80864692749181" lon="4.49048282121843">
+                <time>2024-09-13T18:41:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2255</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808517946772895" lon="4.490482457999353">
+                <time>2024-09-13T18:41:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2295</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808400262179404" lon="4.490482126591827">
+                <time>2024-09-13T18:42:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2338</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808329043148426" lon="4.490481926034748">
+                <time>2024-09-13T18:42:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2368</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808244789486295" lon="4.490481688771744">
+                <time>2024-09-13T18:42:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2403</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80820363635247" lon="4.490481572882374">
+                <time>2024-09-13T18:42:58+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2419</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80816932762176" lon="4.490481476267259">
+                <time>2024-09-13T18:43:12+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2454</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80813710772434" lon="4.490481385534463">
+                <time>2024-09-13T18:43:28+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2497</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.80812035890264" lon="4.4904813383689905">
+                <time>2024-09-13T18:43:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2527</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.808089552737385" lon="4.490481251617416">
+                <time>2024-09-13T18:44:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2593</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.42139320731761" lon="4.666905719791228">
+                <time>2024-09-13T18:50:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>66</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.41659757668631" lon="4.662605188362235">
+                <time>2024-09-13T18:50:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>154</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.409777779090454" lon="4.657690674186887">
+                <time>2024-09-13T18:51:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>215</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.402397827646865" lon="4.652238156213999">
+                <time>2024-09-13T18:51:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>293</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.39145083660106" lon="4.660879589120882">
+                <time>2024-09-13T18:51:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>114</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.385939824094116" lon="4.665082487978797">
+                <time>2024-09-13T18:51:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>142</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.38167069294584" lon="4.669522315971539">
+                <time>2024-09-13T18:51:59+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>74</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.377012414042106" lon="4.6712825181677635">
+                <time>2024-09-13T18:52:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>68</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.37376253190255" lon="4.673600923911668">
+                <time>2024-09-13T18:52:19+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>298</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.369212416579124" lon="4.676709983818432">
+                <time>2024-09-13T18:52:29+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>324</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.36510792512831" lon="4.679514328038338">
+                <time>2024-09-13T18:52:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>399</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.361810883157986" lon="4.681766697215861">
+                <time>2024-09-13T18:52:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>489</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.357245000966664" lon="4.684885872649027">
+                <time>2024-09-13T18:53:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>627</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.35424362315186" lon="4.6869361329000006">
+                <time>2024-09-13T18:53:22+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>702</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.35241256224613" lon="4.688186844707333">
+                <time>2024-09-13T18:53:32+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>771</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.349960767214434" lon="4.689861488706893">
+                <time>2024-09-13T18:53:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>896</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.26918898655762" lon="4.803475037223144">
+                <time>2024-09-13T18:56:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1460</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.268758839275726" lon="4.803994992486671">
+                <time>2024-09-13T18:56:21+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1511</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.2681957795587" lon="4.804675610209647">
+                <time>2024-09-13T18:56:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1580</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.26784874266909" lon="4.805095120751481">
+                <time>2024-09-13T18:56:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1626</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.26762749609575" lon="4.80536257532412">
+                <time>2024-09-13T18:57:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1671</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.267334469514815" lon="4.8057168002579775">
+                <time>2024-09-13T18:57:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1781</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.26714111832385" lon="4.805950531162272">
+                <time>2024-09-13T18:57:31+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1828</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.26702302850292" lon="4.806093282678492">
+                <time>2024-09-13T18:57:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1869</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.266922563883625" lon="4.806214727897599">
+                <time>2024-09-13T18:57:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1908</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.26676485017894" lon="4.806405377350863">
+                <time>2024-09-13T18:58:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1983</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.14084630726126" lon="4.84470071061469">
+                <time>2024-09-13T19:00:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2255</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.14024133876184" lon="4.844779699514483">
+                <time>2024-09-13T19:00:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2299</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.13997819602131" lon="4.844814059110433">
+                <time>2024-09-13T19:00:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2323</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.13962512021929" lon="4.844860158764928">
+                <time>2024-09-13T19:00:59+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2356</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.13935679925682" lon="4.844895191870077">
+                <time>2024-09-13T19:01:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2374</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="46.13909900362017" lon="4.844928850587193">
+                <time>2024-09-13T19:01:42+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2426</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.98364123534027" lon="4.855807730222044">
+                <time>2024-09-13T19:03:52+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2662</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.98337784275537" lon="4.85589303116236">
+                <time>2024-09-13T19:04:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2692</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.9116733647215" lon="4.873324500087105">
+                <time>2024-09-13T19:05:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2861</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.87218458100621" lon="4.88432085807125">
+                <time>2024-09-13T19:06:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2940</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.8599365950153" lon="4.97183328913055">
+                <time>2024-09-13T19:08:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1415</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.85988697192545" lon="4.9723118617934485">
+                <time>2024-09-13T19:08:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1428</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.859792726364724" lon="4.973220777399885">
+                <time>2024-09-13T19:08:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1478</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.78306552554549" lon="5.072640736438157">
+                <time>2024-09-13T19:10:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1862</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.75697923671703" lon="5.091987507883891">
+                <time>2024-09-13T19:11:45+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.756712381696815" lon="5.092450520995246">
+                <time>2024-09-13T19:11:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.75018864371624" lon="5.085159892051224">
+                <time>2024-09-13T19:12:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1416</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.74882918349299" lon="5.083690054300513">
+                <time>2024-09-13T19:12:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1416</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.74966147115551" lon="5.083411755362719">
+                <time>2024-09-13T19:12:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.75183511279373" lon="5.0850578663440595">
+                <time>2024-09-13T19:13:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.752469091601306" lon="5.085537982044505">
+                <time>2024-09-13T19:13:18+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.752469091609704" lon="5.08553798205047">
+                <time>2024-09-13T19:13:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.75246909161369" lon="5.085537982053301">
+                <time>2024-09-13T19:13:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.75246909161505" lon="5.085537982054269">
+                <time>2024-09-13T19:13:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1417</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.73236090156866" lon="5.080193685080143">
+                <time>2024-09-13T19:15:35+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1479</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.7280030381275" lon="5.079438519638098">
+                <time>2024-09-13T19:15:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1525</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.686150405077306" lon="5.057943352711659">
+                <time>2024-09-13T19:16:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.68574511220712" lon="5.057803982929697">
+                <time>2024-09-13T19:16:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1442</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.68327820849483" lon="5.059820119450752">
+                <time>2024-09-13T19:17:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1498</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.679192833645125" lon="5.0636458774612">
+                <time>2024-09-13T19:17:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1568</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.67888685427927" lon="5.063748336171115">
+                <time>2024-09-13T19:17:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1583</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.5814744899269" lon="5.107373120999339">
+                <time>2024-09-13T19:20:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1481</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.53258640298416" lon="5.077703409692064">
+                <time>2024-09-13T19:20:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>84</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.52644297713315" lon="5.071594407821976">
+                <time>2024-09-13T19:21:05+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>48</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="45.35742861688636" lon="5.004349574451338">
+                <time>2024-09-13T19:25:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>33</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.67107072180016" lon="4.9282967867092875">
+                <time>2024-09-13T19:41:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.66266067059952" lon="4.923059267109808">
+                <time>2024-09-13T19:42:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1457</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.66089671875098" lon="4.9219997421950925">
+                <time>2024-09-13T19:42:20+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1496</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.65989492109964" lon="4.9214018120889245">
+                <time>2024-09-13T19:42:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1498</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.65914610654788" lon="4.921057332654348">
+                <time>2024-09-13T19:42:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1558</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.60723856853532" lon="4.868647758096919">
+                <time>2024-09-13T19:44:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1758</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.60663820059877" lon="4.868104216814776">
+                <time>2024-09-13T19:44:28+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1823</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.60616392858061" lon="4.867674840747527">
+                <time>2024-09-13T19:44:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1860</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.60591945327473" lon="4.867453509663956">
+                <time>2024-09-13T19:45:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1873</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.55509141148304" lon="4.81579904376775">
+                <time>2024-09-13T19:45:46+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1470</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.554875670838975" lon="4.815590980925766">
+                <time>2024-09-13T19:46:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1519</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.554725321743" lon="4.815445982959962">
+                <time>2024-09-13T19:46:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1557</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.55456843928468" lon="4.8152946845619145">
+                <time>2024-09-13T19:46:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1614</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.55446777520947" lon="4.815197603767609">
+                <time>2024-09-13T19:46:37+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1644</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.554374054845184" lon="4.815107219664746">
+                <time>2024-09-13T19:46:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1685</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.55427848809042" lon="4.815015055054624">
+                <time>2024-09-13T19:47:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1738</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.55422963124025" lon="4.814967937561327">
+                <time>2024-09-13T19:47:16+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1756</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.554164223717194" lon="4.8149048586740335">
+                <time>2024-09-13T19:47:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1811</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.5541084653675" lon="4.814851085489638">
+                <time>2024-09-13T19:47:52+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1873</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.55406813711233" lon="4.814812193076268">
+                <time>2024-09-13T19:48:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1932</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.554050353073364" lon="4.8147950422280905">
+                <time>2024-09-13T19:48:22+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1948</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.40266714901142" lon="4.738834435124638">
+                <time>2024-09-13T19:48:48+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>15</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="44.3290956225659" lon="4.698026468981707">
+                <time>2024-09-13T19:50:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>15</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.973852281746524" lon="4.741717563000167">
+                <time>2024-09-13T19:59:56+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2764</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.97345228195208" lon="4.741753444375266">
+                <time>2024-09-13T20:00:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2790</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.97295927539025" lon="4.741797668373725">
+                <time>2024-09-13T20:00:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2809</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.972632291126274" lon="4.7418269995188504">
+                <time>2024-09-13T20:00:36+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2824</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.97234767213843" lon="4.74185253028747">
+                <time>2024-09-13T20:00:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2849</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.97209077640059" lon="4.7418755741302965">
+                <time>2024-09-13T20:01:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2884</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.87225905903044" lon="4.973489837725622">
+                <time>2024-09-13T20:03:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>28</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45533629855146" lon="5.317591886239283">
+                <time>2024-09-13T20:19:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45528350427513" lon="5.3175712681194085">
+                <time>2024-09-13T20:19:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45525710713695" lon="5.317560959059463">
+                <time>2024-09-13T20:19:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45523730928401" lon="5.31755322726478">
+                <time>2024-09-13T20:19:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45523400964157" lon="5.317551938632222">
+                <time>2024-09-13T20:19:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45523235982036" lon="5.317551294315942">
+                <time>2024-09-13T20:19:54+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45523153490974" lon="5.317550972157804">
+                <time>2024-09-13T20:20:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.455231122454556" lon="5.317550811078781">
+                <time>2024-09-13T20:20:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45451195169761" lon="5.317245463316999">
+                <time>2024-09-13T20:20:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>111</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45451195169525" lon="5.317245463316039">
+                <time>2024-09-13T20:20:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>111</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.454511951694535" lon="5.317245463315753">
+                <time>2024-09-13T20:21:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>117</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.359256739999985" lon="5.345129479999998">
+                <time>2024-09-13T20:25:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34790684459859" lon="5.361700474147632">
+                <time>2024-09-13T20:26:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>177</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.3478277568434" lon="5.361824442845197">
+                <time>2024-09-13T20:26:55+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>330</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.347412043354986" lon="5.362777558271173">
+                <time>2024-09-13T20:27:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>479</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34739996420809" lon="5.362798402804931">
+                <time>2024-09-13T20:27:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>487</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34665210267286" lon="5.364719262241972">
+                <time>2024-09-13T20:27:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>511</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34535717053364" lon="5.368045255768274">
+                <time>2024-09-13T20:27:56+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>523</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.344802174232285" lon="5.369470746765117">
+                <time>2024-09-13T20:28:06+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>536</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34430509821441" lon="5.370747471288355">
+                <time>2024-09-13T20:28:16+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>539</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34387716082039" lon="5.371846615374367">
+                <time>2024-09-13T20:28:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>539</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.343503361053195" lon="5.372806708624455">
+                <time>2024-09-13T20:28:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>541</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.34350336105308" lon="5.372806708624754">
+                <time>2024-09-13T20:28:56+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>545</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.31044007599481" lon="5.398582495324956">
+                <time>2024-09-13T20:31:56+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>994</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.30660201767863" lon="5.401002434614913">
+                <time>2024-09-13T20:32:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1046</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.3047197153674" lon="5.402715918861025">
+                <time>2024-09-13T20:32:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1070</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.304104299603736" lon="5.403271584763122">
+                <time>2024-09-13T20:32:37+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1070</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.30361819369842" lon="5.403710495321151">
+                <time>2024-09-13T20:32:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1070</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.303233844721596" lon="5.404057528389176">
+                <time>2024-09-13T20:33:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1073</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.30323375523247" lon="5.4040576091899135">
+                <time>2024-09-13T20:33:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1099</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.299051245264515" lon="5.409290127436655">
+                <time>2024-09-13T20:33:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1139</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29305267619659" lon="5.416794642918997">
+                <time>2024-09-13T20:33:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1205</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29288732105438" lon="5.421512640595331">
+                <time>2024-09-13T20:34:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1206</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29450768817521" lon="5.423653419805047">
+                <time>2024-09-13T20:34:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1227</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29484698592035" lon="5.424101689549042">
+                <time>2024-09-13T20:34:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1228</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.295040057574205" lon="5.424356769879099">
+                <time>2024-09-13T20:34:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1228</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29504005757429" lon="5.424356769879214">
+                <time>2024-09-13T20:34:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1229</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29285488647447" lon="5.424904184542611">
+                <time>2024-09-13T20:35:14+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1232</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.294783488044025" lon="5.43621851784437">
+                <time>2024-09-13T20:35:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1232</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29441387732741" lon="5.442137825033366">
+                <time>2024-09-13T20:35:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1233</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29223834441721" lon="5.441896335857781">
+                <time>2024-09-13T20:35:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1249</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28805933759948" lon="5.464614926397969">
+                <time>2024-09-13T20:36:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1380</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28949315682079" lon="5.481705806675731">
+                <time>2024-09-13T20:37:36+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1433</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28867192817503" lon="5.48254272217416">
+                <time>2024-09-13T20:37:48+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1451</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28857270732425" lon="5.48257134429135">
+                <time>2024-09-13T20:37:58+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1482</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28694550778582" lon="5.4927044156272595">
+                <time>2024-09-13T20:38:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28597198118521" lon="5.49904603945211">
+                <time>2024-09-13T20:38:28+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28668620302485" lon="5.502267931802505">
+                <time>2024-09-13T20:38:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28735025672098" lon="5.506067707294038">
+                <time>2024-09-13T20:38:58+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1422</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28613596828104" lon="5.5244874384224785">
+                <time>2024-09-13T20:39:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1428</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.30122646608434" lon="5.565088655863432">
+                <time>2024-09-13T20:41:19+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1475</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29129914571447" lon="5.5867116784508415">
+                <time>2024-09-13T20:42:29+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28877164634973" lon="5.586909174993547">
+                <time>2024-09-13T20:42:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.287594092671135" lon="5.582423664074782">
+                <time>2024-09-13T20:42:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>72</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28759333259783" lon="5.582422089878935">
+                <time>2024-09-13T20:43:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>87</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28759333259738" lon="5.582422089878008">
+                <time>2024-09-13T20:43:28+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>152</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28590682597854" lon="5.579686763228639">
+                <time>2024-09-13T20:44:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>659</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28366123275835" lon="5.576044667196011">
+                <time>2024-09-13T20:44:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>747</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.282057727581936" lon="5.573443958825218">
+                <time>2024-09-13T20:44:59+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>749</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.28056741445883" lon="5.571026835402406">
+                <time>2024-09-13T20:45:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>774</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.279280109985216" lon="5.568938969693888">
+                <time>2024-09-13T20:45:21+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>776</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.27816568334874" lon="5.567131492649803">
+                <time>2024-09-13T20:45:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>785</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.276304183987875" lon="5.564112346241251">
+                <time>2024-09-13T20:45:54+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>802</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.27496643336941" lon="5.561942662293484">
+                <time>2024-09-13T20:46:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>803</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.27444178361152" lon="5.561091738255647">
+                <time>2024-09-13T20:46:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>804</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.27444178352934" lon="5.561091738122352">
+                <time>2024-09-13T20:46:46+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>845</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.252608263783756" lon="5.557744347092316">
+                <time>2024-09-13T20:47:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>992</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.252608263679846" lon="5.557744347076387">
+                <time>2024-09-13T20:48:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1020</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25260826363071" lon="5.557744347068855">
+                <time>2024-09-13T20:48:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1056</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25260826357108" lon="5.557744347059715">
+                <time>2024-09-13T20:48:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1106</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.211948972621656" lon="5.583223036065485">
+                <time>2024-09-13T20:49:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1142</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.20004890212114" lon="5.60569432128733">
+                <time>2024-09-13T20:50:18+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1302</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.19972579479899" lon="5.605844396478055">
+                <time>2024-09-13T20:50:29+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1341</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.19968738070973" lon="5.605968441137845">
+                <time>2024-09-13T20:50:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1394</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.20704283040436" lon="5.629849300819024">
+                <time>2024-09-13T20:51:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.20210203554773" lon="5.634748956304786">
+                <time>2024-09-13T20:51:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1428</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.195116403902944" lon="5.643111802442588">
+                <time>2024-09-13T20:52:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.1949378443939" lon="5.642559122972645">
+                <time>2024-09-13T20:53:00+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1459</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.19492268929254" lon="5.642592529798945">
+                <time>2024-09-13T20:53:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1487</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.1949113757562" lon="5.642617468956828">
+                <time>2024-09-13T20:53:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1543</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.187654422393265" lon="5.701318521386065">
+                <time>2024-09-13T20:54:26+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1654</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.18485898457552" lon="5.703059054063259">
+                <time>2024-09-13T20:54:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1660</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.18629175589372" lon="5.704986508457067">
+                <time>2024-09-13T20:55:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.18709573723365" lon="5.705522356840587">
+                <time>2024-09-13T20:56:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1444</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.188034095695166" lon="5.706337883527139">
+                <time>2024-09-13T20:56:18+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1478</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.190338240383724" lon="5.708322741419792">
+                <time>2024-09-13T20:56:31+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1507</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.191085491949536" lon="5.708970882162527">
+                <time>2024-09-13T20:56:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1583</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.191152494392675" lon="5.709031479994263">
+                <time>2024-09-13T20:57:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1596</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.19115632974217" lon="5.709034948733871">
+                <time>2024-09-13T20:57:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1597</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.19115632974878" lon="5.709034948739843">
+                <time>2024-09-13T20:57:22+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1604</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.19115632975664" lon="5.7090349487469565">
+                <time>2024-09-13T20:58:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1670</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.134175188888946" lon="5.777363202542739">
+                <time>2024-09-13T21:00:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1754</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.125637814036274" lon="5.814486510726028">
+                <time>2024-09-13T21:02:32+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1874</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861655721966" lon="5.8189030031783835">
+                <time>2024-09-13T21:02:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1879</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861788119236" lon="5.818904139077413">
+                <time>2024-09-13T21:03:02+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1914</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861863336866" lon="5.818904784405183">
+                <time>2024-09-13T21:03:16+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1944</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861929559262" lon="5.81890535255858">
+                <time>2024-09-13T21:03:32+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1977</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861966903754" lon="5.8189056729547195">
+                <time>2024-09-13T21:03:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1998</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861969165939" lon="5.818905692363068">
+                <time>2024-09-13T21:03:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1999</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.12861969165942" lon="5.818905692363101">
+                <time>2024-09-13T21:04:12+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2002</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.13332296817183" lon="5.910562382567505">
+                <time>2024-09-13T21:07:02+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.132830711740425" lon="5.916147011386241">
+                <time>2024-09-13T21:07:24+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.13010527791082" lon="5.919340635478636">
+                <time>2024-09-13T21:07:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.13011089229815" lon="5.9194086227123615">
+                <time>2024-09-13T21:07:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2000</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.130351864323316" lon="5.926076392262767">
+                <time>2024-09-13T21:08:02+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>91</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.130353383432926" lon="5.926118425006062">
+                <time>2024-09-13T21:08:20+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>260</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.130353383433246" lon="5.926118425014975">
+                <time>2024-09-13T21:08:42+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>260</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.1303533834334" lon="5.92611842501934">
+                <time>2024-09-13T21:08:53+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>261</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.13035338343342" lon="5.926118425020008">
+                <time>2024-09-13T21:09:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>262</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.1282780570993" lon="5.930209539083192">
+                <time>2024-09-13T21:14:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>60</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.136957160673504" lon="6.0547108461829975">
+                <time>2024-09-13T21:21:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1418</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.16080178802263" lon="6.05658342672633">
+                <time>2024-09-13T21:21:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1553</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.17123376173222" lon="6.049768336826229">
+                <time>2024-09-13T21:21:57+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>204</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.17460258029697" lon="6.049011480068834">
+                <time>2024-09-13T21:22:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>30</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25423400558738" lon="6.093411063386598">
+                <time>2024-09-13T21:26:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>181</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.255374684151896" lon="6.094448443079558">
+                <time>2024-09-13T21:26:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>557</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25611889323182" lon="6.095125270374659">
+                <time>2024-09-13T21:27:03+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>752</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25644068124982" lon="6.09541792593383">
+                <time>2024-09-13T21:27:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>845</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25671590200222" lon="6.09566823143729">
+                <time>2024-09-13T21:27:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>929</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25695113094073" lon="6.095882166489002">
+                <time>2024-09-13T21:27:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1006</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.25729649698083" lon="6.096196270239402">
+                <time>2024-09-13T21:27:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1125</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.257471481630034" lon="6.096355416150447">
+                <time>2024-09-13T21:28:03+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1192</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.257597241905394" lon="6.096469793520032">
+                <time>2024-09-13T21:28:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1253</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.26366936185853" lon="6.137009187593265">
+                <time>2024-09-13T21:29:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1466</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29410874123179" lon="6.169588370318829">
+                <time>2024-09-13T21:29:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>72</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.2956514389444" lon="6.17175401328622">
+                <time>2024-09-13T21:30:03+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>542</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29624108133073" lon="6.1725880499014085">
+                <time>2024-09-13T21:30:13+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>643</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.296597890402566" lon="6.177292002953141">
+                <time>2024-09-13T21:30:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>747</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29678110851199" lon="6.182889117173223">
+                <time>2024-09-13T21:30:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>836</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29681885000468" lon="6.188641061030589">
+                <time>2024-09-13T21:30:43+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>917</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29674803106805" lon="6.193987562130782">
+                <time>2024-09-13T21:30:54+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>990</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.29751257866129" lon="6.219493022689057">
+                <time>2024-09-13T21:31:29+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>242</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.298834073305386" lon="6.227491503110405">
+                <time>2024-09-13T21:31:44+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>70</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.30182171508375" lon="6.236338142416774">
+                <time>2024-09-13T21:32:04+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>35</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.35967432865406" lon="6.296785770305856">
+                <time>2024-09-13T21:36:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>55</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.4027106472958" lon="6.406459657186921">
+                <time>2024-09-13T21:42:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2501</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.40359685307548" lon="6.409678933024138">
+                <time>2024-09-13T21:42:19+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2501</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.40387182479364" lon="6.410677809165956">
+                <time>2024-09-13T21:42:29+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2506</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.404072626302366" lon="6.4114072508544115">
+                <time>2024-09-13T21:42:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2506</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.421295807752664" lon="6.428573157602692">
+                <time>2024-09-13T21:43:36+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2516</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.43880042038826" lon="6.439511872783655">
+                <time>2024-09-13T21:44:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2545</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44906317782225" lon="6.462005349122945">
+                <time>2024-09-13T21:45:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2637</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44619217730266" lon="6.48166554993102">
+                <time>2024-09-13T21:46:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2781</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44946958588882" lon="6.484997079601875">
+                <time>2024-09-13T21:47:07+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2714</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.451014560281614" lon="6.4889957042137825">
+                <time>2024-09-13T21:47:17+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2605</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45228676709725" lon="6.490654716580933">
+                <time>2024-09-13T21:47:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2635</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.452543552158254" lon="6.490990511327354">
+                <time>2024-09-13T21:47:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2662</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.452685585143094" lon="6.49116717184369">
+                <time>2024-09-13T21:47:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2618</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45351723957736" lon="6.496910626915327">
+                <time>2024-09-13T21:48:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2581</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45479685588792" lon="6.506428301904807">
+                <time>2024-09-13T21:48:25+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2617</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45581381914535" lon="6.513958176423214">
+                <time>2024-09-13T21:48:38+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2640</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.456607519240976" lon="6.519831196510373">
+                <time>2024-09-13T21:48:50+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2670</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.46394387619711" lon="6.5585272537898565">
+                <time>2024-09-13T21:49:40+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2664</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.46426125308123" lon="6.58843214751244">
+                <time>2024-09-13T21:51:10+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1841</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.461773452885026" lon="6.599878003182789">
+                <time>2024-09-13T21:51:33+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1646</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.46177331789979" lon="6.599878639305846">
+                <time>2024-09-13T21:51:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1646</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.46177331789317" lon="6.599878639337061">
+                <time>2024-09-13T21:52:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1654</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.46177331788747" lon="6.59987863936395">
+                <time>2024-09-13T21:52:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1671</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45895361690863" lon="6.607335649178759">
+                <time>2024-09-13T21:52:27+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1702</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44896598700598" lon="6.63792526495775">
+                <time>2024-09-13T21:53:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44897412339836" lon="6.638043295982977">
+                <time>2024-09-13T21:53:23+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1415</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44897337289722" lon="6.638045800510671">
+                <time>2024-09-13T21:53:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1426</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44897337288998" lon="6.6380458005348375">
+                <time>2024-09-13T21:53:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1448</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44897337287993" lon="6.638045800568413">
+                <time>2024-09-13T21:54:08+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1495</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44895241192661" lon="6.668978647391597">
+                <time>2024-09-13T21:54:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1574</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.448843428164096" lon="6.669704750980713">
+                <time>2024-09-13T21:55:05+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1736</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.44436239920877" lon="6.696184929466523">
+                <time>2024-09-13T21:55:19+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>19</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.441824945315275" lon="6.7000137857180935">
+                <time>2024-09-13T21:55:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>98</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.439921355296825" lon="6.702855997034616">
+                <time>2024-09-13T21:55:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>200</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.43854774725012" lon="6.708371462306667">
+                <time>2024-09-13T21:55:52+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>90</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.437443473416785" lon="6.712704235694103">
+                <time>2024-09-13T21:56:02+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>116</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.437436537914394" lon="6.716804048799447">
+                <time>2024-09-13T21:56:19+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>311</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.4359088533014" lon="6.722892484527189">
+                <time>2024-09-13T21:56:31+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>38</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.432899355868585" lon="6.729214050911284">
+                <time>2024-09-13T21:57:09+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>21</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.42093371998858" lon="6.771808284987963">
+                <time>2024-09-13T22:03:47+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>50</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.43059122566453" lon="6.856522019958921">
+                <time>2024-09-13T22:08:45+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>17</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.45826851216214" lon="6.921512596455116">
+                <time>2024-09-13T22:15:30+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2878</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.50638159071728" lon="6.938455600831889">
+                <time>2024-09-13T22:18:49+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2763</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.507014574665405" lon="6.938478129606495">
+                <time>2024-09-13T22:19:01+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>2763</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.513184415269215" lon="6.939432203658813">
+                <time>2024-09-13T22:19:39+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.51364028215114" lon="6.9390401907763275">
+                <time>2024-09-13T22:19:41+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.51390671636323" lon="6.9388217026800225">
+                <time>2024-09-13T22:19:51+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>1414</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.510790281038275" lon="6.936492081738018">
+                <time>2024-09-13T22:20:20+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>60</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.54789935780989" lon="6.981924255009323">
+                <time>2024-09-13T22:25:11+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>23</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+            <trkpt lat="43.554224991486485" lon="7.020886906197695">
+                <time>2024-09-13T22:28:34+02:00</time>
+                <extensions>
+                    <gpxtpx:accuracy>63</gpxtpx:accuracy>
+                </extensions>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>
