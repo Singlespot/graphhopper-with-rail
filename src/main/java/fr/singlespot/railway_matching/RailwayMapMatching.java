@@ -919,6 +919,12 @@ public class RailwayMapMatching extends MapMatching {
         // Build waypoint lists for each segment
         List<List<Integer>> segmentWaypointIndices = buildWaypointsList(filteredObservations, offPathSegments, offPathSet);
 
+        // Create mapping from original to filtered positions for debug output
+        Map<Integer, Integer> originalToFilteredPos = new HashMap<>();
+        for (int i = 0; i < filteredObservations.size(); i++) {
+            originalToFilteredPos.put(filteredObservations.get(i).getPoint().index, i);
+        }
+
         // Check waypoints have snaps
         Map<Integer, List<Snap>> waypointAllSnapsMap = new LinkedHashMap<>();
         for (List<Integer> waypoints : segmentWaypointIndices) {
@@ -951,7 +957,10 @@ public class RailwayMapMatching extends MapMatching {
                 
                 if (obs != null) {
                     Snap closestSnap = candidateSnaps.get(0);
-                    System.out.println("  Obs " + obs.getPoint().index + (offPathSet.contains(obsIdx) ? " [OFF-PATH]" : " [ON-PATH anchor]") +
+                    // Get the filtered position to check offPathSet correctly
+                    Integer filteredPos = originalToFilteredPos.get(obsIdx);
+                    boolean isOffPath = filteredPos != null && offPathSet.contains(filteredPos);
+                    System.out.println("  Obs " + obs.getPoint().index + (isOffPath ? " [OFF-PATH]" : " [ON-PATH anchor]") +
                             ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
                             " -> snapped to node " + closestSnap.getClosestNode() +
                             " at " + closestSnap.getSnappedPoint().lat + "," + closestSnap.getSnappedPoint().lon +
@@ -982,11 +991,6 @@ public class RailwayMapMatching extends MapMatching {
         for (int i = 0; i < filteredObservations.size(); i++) {
             routedPathSnaps.add(new ArrayList<>());
         }
-        Map<Integer, Integer> originalToFilteredPos = new HashMap<>();
-        for (int i = 0; i < filteredObservations.size(); i++) {
-            originalToFilteredPos.put(filteredObservations.get(i).getPoint().index, i);
-        }
-        
         boolean allSegmentsRouted = true;
         
         for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
@@ -1094,8 +1098,9 @@ public class RailwayMapMatching extends MapMatching {
                 if (wpIdx > 0 && previousLegToSnap != null
                         && bestFromSnap.getClosestNode() != previousLegToSnap.getClosestNode()) {
                     
-                                        int prevEndNode = previousLegToSnap.getClosestNode();
+                    int prevEndNode = previousLegToSnap.getClosestNode();
                     int curStartNode = bestFromSnap.getClosestNode();
+                    boolean bridgeFound = false;
                     
                     try {
                         List<Path> intraBridge = router.calcPaths(queryGraph, prevEndNode, EdgeIterator.ANY_EDGE,
@@ -1104,28 +1109,105 @@ public class RailwayMapMatching extends MapMatching {
                                 && intraBridge.get(0).getDistance() <= 20000) {
                             List<EdgeIteratorState> bridgeEdges = intraBridge.get(0).calcEdges();
                             segmentEdges.addAll(bridgeEdges);
-                        } else {
-                            double bridgeDist = (!intraBridge.isEmpty() && intraBridge.get(0).isFound()) 
-                                    ? intraBridge.get(0).getDistance() : -1;
-                            GHPoint prevPt = previousLegToSnap.getQueryPoint();  // End of previous leg
-                            GHPoint curPt = bestToSnap.getQueryPoint();      // End of current leg
-                            // Use the actual observation indices for the legs being bridged
-                            System.out.println("  Intra-bridge routing failed between obs " + fromOriginalIdx + " and " + toOriginalIdx +
-                                    " (distance=" + String.format("%.0f", bridgeDist) + "m, limit=20000m)" +
-                                    " prevEndNode=" + prevEndNode + " curStartNode=" + curStartNode +
-                                    " (" + String.format("%.6f,%.6f", prevPt.lon, prevPt.lat) + ")" +
-                                    " -> (" + String.format("%.6f,%.6f", curPt.lon, curPt.lat) + ")");
-                            segmentSpliceable = false;
+                            bridgeFound = true;
                         }
                     } catch (Exception e) {
-                        GHPoint prevPt = previousLegToSnap.getQueryPoint();  // End of previous leg
-                        GHPoint curPt = bestToSnap.getQueryPoint();      // End of current leg
-                        // Use the actual observation indices for the legs being bridged
-                        System.out.println("  Intra-bridge routing failed with exception between obs " + fromOriginalIdx + " and " + toOriginalIdx +
-                                ": " + e.getMessage() +
-                                " (" + String.format("%.6f,%.6f", prevPt.lon, prevPt.lat) + ")" +
-                                " -> (" + String.format("%.6f,%.6f", curPt.lon, curPt.lat) + ")");
-                        segmentSpliceable = false;
+                        // Continue to try other combinations
+                    }
+                    
+                    // If bridge not found with best snaps, try all combinations
+                    if (!bridgeFound) {
+                        System.out.println("  Intra-bridge routing failed with best snaps, trying all combinations between obs " + 
+                                fromOriginalIdx + " and " + toOriginalIdx + " (" + 
+                                allFromCandidates.size() + " × " + toCandidates.size() + " combinations)");
+                        
+                        boolean foundValidBridge = false;
+                        int bestDistance = Integer.MAX_VALUE;
+                        Snap bestFromSnapRetry = null;
+                        Snap bestToSnapRetry = null;
+                        
+                        for (Snap fromSnap : allFromCandidates) {
+                            for (Snap toSnap : toCandidates) {
+                                if (fromSnap.getClosestNode() == toSnap.getClosestNode()) {
+                                    // Perfect match - same node
+                                    bestFromSnapRetry = fromSnap;
+                                    bestToSnapRetry = toSnap;
+                                    bestDistance = 0;
+                                    foundValidBridge = true;
+                                    break;
+                                }
+                                
+                                try {
+                                    List<Path> bridge = router.calcPaths(queryGraph, fromSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
+                                            new int[]{toSnap.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
+                                    if (!bridge.isEmpty() && bridge.get(0).isFound() && bridge.get(0).getDistance() <= 20000) {
+                                        if (bridge.get(0).getDistance() < bestDistance) {
+                                            bestDistance = (int) bridge.get(0).getDistance();
+                                            bestFromSnapRetry = fromSnap;
+                                            bestToSnapRetry = toSnap;
+                                            foundValidBridge = true;
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    // Continue trying other combinations
+                                }
+                            }
+                            if (bestDistance == 0) break; // Found perfect match
+                        }
+                        
+                        if (foundValidBridge) {
+                            System.out.println("  Found valid bridge with alternative snaps: distance=" + bestDistance + "m" +
+                                    " (from node " + bestFromSnapRetry.getClosestNode() + " to node " + bestToSnapRetry.getClosestNode() + ")");
+                            
+                            // Re-route the current leg with the new snap
+                            if (bestToSnapRetry != bestToSnap) {
+                                // Need to re-route this leg with the new toSnap
+                                try {
+                                    List<Path> retryLegPaths = router.calcPaths(queryGraph, bestFromSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
+                                            new int[]{bestToSnapRetry.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
+                                    if (!retryLegPaths.isEmpty() && retryLegPaths.get(0).isFound()) {
+                                        Path retryLegPath = retryLegPaths.get(0);
+                                        // Replace the leg edges
+                                        segmentEdges.subList(segmentEdges.size() - bestLegPath.calcEdges().size(), segmentEdges.size()).clear();
+                                        List<EdgeIteratorState> retryLegEdges = retryLegPath.calcEdges();
+                                        segmentEdges.addAll(retryLegEdges);
+                                        bestLegPath = retryLegPath;
+                                        bestToSnap = bestToSnapRetry;
+                                        
+                                        // Update routedPathSnaps
+                                        if (toFilteredPos != null) {
+                                            routedPathSnaps.get(toFilteredPos).clear();
+                                            routedPathSnaps.get(toFilteredPos).add(bestToSnap);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    System.out.println("  Failed to re-route leg with alternative snap: " + e.getMessage());
+                                    segmentSpliceable = false;
+                                }
+                            }
+                            
+                            // Add the bridge edges
+                            if (bestFromSnapRetry != bestFromSnap) {
+                                // Need to re-route previous leg - too complex, mark as unspliceable
+                                System.out.println("  Would need to re-route previous leg, marking segment as unspliceable");
+                                segmentSpliceable = false;
+                            } else {
+                                // Just add the bridge
+                                try {
+                                    List<Path> finalBridge = router.calcPaths(queryGraph, previousLegToSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
+                                            new int[]{bestFromSnap.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
+                                    if (!finalBridge.isEmpty() && finalBridge.get(0).isFound()) {
+                                        segmentEdges.addAll(finalBridge.get(0).calcEdges());
+                                    }
+                                } catch (Exception e) {
+                                    System.out.println("  Failed to add final bridge: " + e.getMessage());
+                                    segmentSpliceable = false;
+                                }
+                            }
+                        } else {
+                            System.out.println("  No valid bridge found between any snap combinations, marking segment as unspliceable");
+                            segmentSpliceable = false;
+                        }
                     }
                 }
                 
