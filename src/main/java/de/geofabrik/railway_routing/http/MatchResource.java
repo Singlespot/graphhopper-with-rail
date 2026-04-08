@@ -537,12 +537,7 @@ public class MatchResource {
                 // Always add the match result if it has a valid merged path
                 if (matchResult.getMergedPath() != null) {
                     matchResultsList.add(matchResult);
-                    System.out.println("DEBUG: Added MatchResult to list. List size now: " + matchResultsList.size());
-                    System.out.println("DEBUG: MatchResult mergedPath class: " + matchResult.getMergedPath().getClass().getSimpleName());
-                    System.out.println("DEBUG: MatchResult mergedPath distance: " + matchResult.getMergedPath().getDistance());
                     offset = mapMatching.getProcessedPointsCount() - 1;
-                } else {
-                    System.out.println("DEBUG: MatchResult mergedPath is null, not adding to list");
                 }
             } while (fillGaps && mapMatching.hasPointsToBeMatched());
 
@@ -554,20 +549,6 @@ public class MatchResource {
                     setRamerDouglasPeucker(peucker).
                     setSimplifyResponse(minPathPrecision > 0);
             List<Path> paths = matchResultsList.stream().map(r -> r.getMergedPath()).collect(Collectors.toList());
-            System.out.println("DEBUG: matchResultsList.size() = " + matchResultsList.size());
-            System.out.println("DEBUG: paths.size() = " + paths.size());
-            for (int i = 0; i < paths.size(); i++) {
-                Path p = paths.get(i);
-                System.out.println("DEBUG: Path " + i + " is null: " + (p == null));
-                if (p != null) {
-                    System.out.println("DEBUG: Path " + i + " class: " + p.getClass().getSimpleName());
-                    System.out.println("DEBUG: Path " + i + " distance: " + p.getDistance());
-                    System.out.println("DEBUG: Path " + i + " isFound: " + p.isFound());
-                    if (p.calcPoints() != null) {
-                        System.out.println("DEBUG: Path " + i + " points: " + p.calcPoints().size());
-                    }
-                }
-            }
             ResponsePath responsePath = pathMerger.doWork(PointList.EMPTY, paths,
                     hopper.getEncodingManager(), tr);
             GHResponse rsp = new GHResponse();

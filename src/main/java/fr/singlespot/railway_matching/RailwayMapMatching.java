@@ -452,8 +452,11 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
 
-            // Insert routed segment edges
-            mergedPath.addAll(perSegmentRoutedEdges.get(segNum));
+            // Insert routed segment edges (already correctly oriented from Path.calcEdges())
+            List<EdgeIteratorState> segmentEdges = perSegmentRoutedEdges.get(segNum);
+            if (!segmentEdges.isEmpty()) {
+                mergedPath.addAll(segmentEdges);
+            }
 
             if (endNode >= 0) {
                 // Skip bestPath edges until we find one that departs from the segment's end node
@@ -472,21 +475,28 @@ public class RailwayMapMatching extends MapMatching {
             bpCursor++;
         }
 
-        // Validate connectivity
+        // Validate merged path connectivity
         if (mergedPath.size() > 1) {
-            int[] mergedNodes = new int[mergedPath.size() + 1];
-            mergedNodes[0] = mergedPath.get(0).getBaseNode();
+            int prevNode = mergedPath.get(0).getBaseNode();
+            int discontinuities = 0;
             for (int i = 0; i < mergedPath.size(); i++) {
                 EdgeIteratorState e = mergedPath.get(i);
-                mergedNodes[i + 1] = (e.getBaseNode() == mergedNodes[i]) ? e.getAdjNode() : e.getBaseNode();
-            }
-            for (int i = 0; i < mergedPath.size(); i++) {
-                EdgeIteratorState e = mergedPath.get(i);
-                if (e.getBaseNode() != mergedNodes[i] && e.getAdjNode() != mergedNodes[i]) {
-                    System.out.println("WARNING: Merged path discontinuity at edge " + i +
-                            ": expected node " + mergedNodes[i] + " but edge " + e.getEdge() +
-                            " connects " + e.getBaseNode() + "<->" + e.getAdjNode());
+                if (e.getBaseNode() == prevNode) {
+                    prevNode = e.getAdjNode();
+                } else if (e.getAdjNode() == prevNode) {
+                    prevNode = e.getBaseNode();
+                } else {
+                    if (discontinuities < 5) {
+                        System.out.println("WARNING: Merged path discontinuity at edge " + i +
+                                ": expected node " + prevNode + " but edge " + e.getEdge() +
+                                " connects " + e.getBaseNode() + "<->" + e.getAdjNode());
+                    }
+                    discontinuities++;
+                    prevNode = e.getBaseNode();
                 }
+            }
+            if (discontinuities > 0) {
+                System.out.println("WARNING: Merged path has " + discontinuities + " discontinuities out of " + mergedPath.size() + " edges");
             }
         }
 
@@ -988,6 +998,7 @@ public class RailwayMapMatching extends MapMatching {
             int segmentStartNode = -1;
             int segmentEndNode = -1;
             
+                        
             Snap previousLegToSnap = null;
             boolean segmentSpliceable = true;
             
@@ -995,10 +1006,10 @@ public class RailwayMapMatching extends MapMatching {
                 // Check time limit in inner loop as well
                 checkTimeLimit(sw);
                 
-                int fromObsIdx = waypoints.get(wpIdx);
-                int toObsIdx = waypoints.get(wpIdx + 1);
-                List<Snap> allFromCandidates = waypointAllSnapsMap.get(fromObsIdx);
-                List<Snap> toCandidates = waypointAllSnapsMap.get(toObsIdx);
+                int fromOriginalIdx = waypoints.get(wpIdx);
+                int toOriginalIdx = waypoints.get(wpIdx + 1);
+                List<Snap> allFromCandidates = waypointAllSnapsMap.get(fromOriginalIdx);
+                List<Snap> toCandidates = waypointAllSnapsMap.get(toOriginalIdx);
                 
                 // Limit candidates
                 int maxCandidates = 10;
@@ -1074,15 +1085,16 @@ public class RailwayMapMatching extends MapMatching {
                 if (wpIdx == waypoints.size() - 2) segmentEndNode = bestToSnap.getClosestNode();
                 
                 // Add snaps to routedPathSnaps
-                Integer fromFilteredPos = originalToFilteredPos.get(fromObsIdx);
-                Integer toFilteredPos = originalToFilteredPos.get(toObsIdx);
+                Integer fromFilteredPos = originalToFilteredPos.get(fromOriginalIdx);
+                Integer toFilteredPos = originalToFilteredPos.get(toOriginalIdx);
                 if (fromFilteredPos != null) routedPathSnaps.get(fromFilteredPos).add(bestFromSnap);
                 if (toFilteredPos != null) routedPathSnaps.get(toFilteredPos).add(bestToSnap);
                 
                 // Handle chaining
                 if (wpIdx > 0 && previousLegToSnap != null
                         && bestFromSnap.getClosestNode() != previousLegToSnap.getClosestNode()) {
-                    int prevEndNode = previousLegToSnap.getClosestNode();
+                    
+                                        int prevEndNode = previousLegToSnap.getClosestNode();
                     int curStartNode = bestFromSnap.getClosestNode();
                     
                     try {
@@ -1093,22 +1105,39 @@ public class RailwayMapMatching extends MapMatching {
                             List<EdgeIteratorState> bridgeEdges = intraBridge.get(0).calcEdges();
                             segmentEdges.addAll(bridgeEdges);
                         } else {
+                            double bridgeDist = (!intraBridge.isEmpty() && intraBridge.get(0).isFound()) 
+                                    ? intraBridge.get(0).getDistance() : -1;
+                            GHPoint prevPt = previousLegToSnap.getQueryPoint();  // End of previous leg
+                            GHPoint curPt = bestToSnap.getQueryPoint();      // End of current leg
+                            // Use the actual observation indices for the legs being bridged
+                            System.out.println("  Intra-bridge routing failed between obs " + fromOriginalIdx + " and " + toOriginalIdx +
+                                    " (distance=" + String.format("%.0f", bridgeDist) + "m, limit=20000m)" +
+                                    " prevEndNode=" + prevEndNode + " curStartNode=" + curStartNode +
+                                    " (" + String.format("%.6f,%.6f", prevPt.lon, prevPt.lat) + ")" +
+                                    " -> (" + String.format("%.6f,%.6f", curPt.lon, curPt.lat) + ")");
                             segmentSpliceable = false;
-                            segmentStartNode = -1;
-                            segmentEndNode = -1;
                         }
                     } catch (Exception e) {
+                        GHPoint prevPt = previousLegToSnap.getQueryPoint();  // End of previous leg
+                        GHPoint curPt = bestToSnap.getQueryPoint();      // End of current leg
+                        // Use the actual observation indices for the legs being bridged
+                        System.out.println("  Intra-bridge routing failed with exception between obs " + fromOriginalIdx + " and " + toOriginalIdx +
+                                ": " + e.getMessage() +
+                                " (" + String.format("%.6f,%.6f", prevPt.lon, prevPt.lat) + ")" +
+                                " -> (" + String.format("%.6f,%.6f", curPt.lon, curPt.lat) + ")");
                         segmentSpliceable = false;
-                        segmentStartNode = -1;
-                        segmentEndNode = -1;
                     }
-                    
-                    if (!segmentSpliceable) break;
                 }
                 
                 List<EdgeIteratorState> legEdges = bestLegPath.calcEdges();
                 segmentEdges.addAll(legEdges);
                 previousLegToSnap = bestToSnap;
+            }
+            
+            // If segment has internal gaps (e.g. failed intra-bridge), mark unspliceable
+            if (!segmentSpliceable) {
+                segmentStartNode = -1;
+                segmentEndNode = -1;
             }
             
             // Walk-back splice for start and end nodes if segment is still spliceable
