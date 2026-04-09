@@ -258,3 +258,21 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
 - All existing tests pass without modification
 - testFullGPXTrackMatching: Passes in ~2.5 minutes
 - No functional changes - only code structure improvements
+
+## PathMerger Continuity Fixes (April 9, 2026)
+
+### EdgeInfo Abstraction Removed
+- **Problem**: `EdgeInfo` wrapper class (storing `edgeId` + `adjNode`) was losing traversal orientation when round-tripping through `queryGraph.getEdgeIteratorState(edgeId, adjNode)`
+- **Solution**: Replaced all `List<EdgeInfo>` with `List<EdgeIteratorState>` throughout `buildMergedEdgeList`, `performViaWaypointRouting`, and `attemptViaWaypointRouting`
+- **Impact**: Edge orientation from `Path.calcEdges()` is now preserved end-to-end
+
+### bestPathNodes Traversal-Aware Construction
+- **Problem**: `bestPathNodes` array was built by blindly using `getAdjNode()` for each edge, assuming `edge[i].adjNode == edge[i+1].baseNode`. This broke for edges traversed in reverse physical direction, producing a wrong node sequence and causing the skip-forward cursor to resume at the wrong position.
+- **Solution**: Node sequence now follows actual traversal direction — for each edge, the arrival node is `(e.getBaseNode() == from) ? e.getAdjNode() : e.getBaseNode()`
+- **Same fix applied** to `bestPathNodeSet` construction in `performViaWaypointRouting`
+
+### Intra-Bridge Continuity Gap Fixed
+- **Problem**: When the primary intra-segment bridge (between consecutive legs) failed and the fallback alt-bridge search succeeded, the alt-bridge routed from `previousLegToSnap → bestFromSnapRetry`. However, the subsequent leg was still computed from the original `bestFromSnap`, leaving a node gap between `bestFromSnapRetry` and `bestFromSnap` that caused 1998 merged-path discontinuities out of 2497 edges.
+- **Root cause**: `bestLegPath` was not updated after the alt-bridge changed the effective departure node for the current leg
+- **Solution**: After a successful alt-bridge, re-route the current leg departing from `bestFromSnapRetry` instead of `bestFromSnap`, ensuring the segment edge chain is unbroken
+- **Result**: Zero merged-path discontinuities; `testGPXDataParisCannes` passes (was throwing `IllegalStateException: Edge not found with adjNode`)

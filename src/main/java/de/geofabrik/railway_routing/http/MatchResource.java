@@ -543,7 +543,9 @@ public class MatchResource {
 
             Translation tr = trMap.getWithFallBack(Helper.getLocale(localeStr));
             RamerDouglasPeucker peucker = new RamerDouglasPeucker().setMaxDistance(minPathPrecision);
-            PathMerger pathMerger = new PathMerger(matchResultsList.get(0).getGraph(), matchResultsList.get(0).getWeighting()).
+            // Use the QueryGraph from the merged path instead of the base graph
+            Path firstPath = matchResultsList.get(0).getMergedPath();
+            PathMerger pathMerger = new PathMerger(firstPath.getGraph(), matchResultsList.get(0).getWeighting()).
                     setEnableInstructions(instructions).
                     setPathDetailsBuilders(hopper.getPathDetailsBuilderFactory(), pathDetails).
                     setRamerDouglasPeucker(peucker).

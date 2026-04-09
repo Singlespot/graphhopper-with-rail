@@ -16,6 +16,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+// Simple class to store edge information without iterator state
+class EdgeInfo {
+    final int edgeId;
+    final int adjNode;
+    
+    EdgeInfo(int edgeId, int adjNode) {
+        this.edgeId = edgeId;
+        this.adjNode = adjNode;
+    }
+}
+
 public class RailwayMapMatching extends MapMatching {
 
     // State from prepareQueryGraph(), consumed by match_with_routing()
@@ -106,17 +117,14 @@ public class RailwayMapMatching extends MapMatching {
         // Snap observations to links. Generates multiple candidate snaps per observation.
         java.util.function.Function<Observation, List<Snap>> findCandidateSnaps = o -> findCandidateSnaps(o.getPoint().lat, o.getPoint().lon, Math.max(20, o.getPoint().accuracy), o.getPoint().index, o.getPoint().timestamp);
 
-        List<List<Snap>> snapsPerObservationTmp;
-        if (queryGraphPrepared) {
-            // Reuse snaps and queryGraph from prepareQueryGraph()
-            snapsPerObservationTmp = preparedSnapsPerObservation;
-            queryGraphPrepared = false; // consumed
-        } else {
-            snapsPerObservationTmp = filteredObservations.stream()
-                    .map(findCandidateSnaps)
-                    .collect(Collectors.toList());
-            queryGraph = QueryGraph.create(graph, snapsPerObservationTmp.stream().flatMap(Collection::stream).collect(Collectors.toList()));
+        // If queryGraph not prepared yet, create it now with all observation snaps
+        if (!queryGraphPrepared) {
+            prepareQueryGraph(observations, offset);
         }
+        
+        // Use the unified queryGraph for all operations
+        List<List<Snap>> snapsPerObservationTmp = preparedSnapsPerObservation;
+        queryGraphPrepared = false; // consumed
 
         MatchResult result;
         List<SequenceState<State, Observation, Path>> seq;
@@ -374,6 +382,21 @@ public class RailwayMapMatching extends MapMatching {
 
         result = new MatchResult(prepareEdgeMatches(seq));
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
+        
+        // Debug: Log all edges in the merged path
+        System.err.println("DEBUG: Creating MapMatchedPath with " + path.size() + " edges:");
+        for (int i = 0; i < path.size(); i++) {
+            EdgeIteratorState edge = path.get(i);
+            boolean isVirtual = edge.getEdge() >= graph.getEdges();
+            System.err.println("  Edge[" + i + "]: id=" + edge.getEdge() + 
+                    ", baseNode=" + edge.getBaseNode() + ", adjNode=" + edge.getAdjNode() +
+                    ", isVirtual=" + isVirtual);
+            if (edge.getEdge() == 22469425) {
+                System.err.println("    *** FOUND EDGE 22469425 at index " + i + " ***");
+                Thread.dumpStack();
+            }
+        }
+        
         result.setMergedPath(new MapMatchedPath(queryGraph, queryGraphWeighting, path));
         result.setMatchMillis(seq.stream().filter(s -> s.transitionDescriptor != null).mapToLong(s -> s.transitionDescriptor.getTime()).sum());
         result.setMatchLength(seq.stream().filter(s -> s.transitionDescriptor != null).mapToDouble(s -> s.transitionDescriptor.getDistance()).sum());
@@ -404,13 +427,15 @@ public class RailwayMapMatching extends MapMatching {
             return all;
         }
 
-        // Compute bestPath node sequence: node[i] connects to node[i+1] via edge[i]
+        // Compute bestPath node sequence: node[i] is departure of edge[i], node[i+1] is arrival.
+        // We follow the actual traversal direction: for each edge, the arrival is whichever endpoint
+        // is NOT the departure. This handles edges traversed in either physical direction.
         int[] bestPathNodes = new int[bestPathEdges.size() + 1];
         bestPathNodes[0] = bestPathEdges.get(0).getBaseNode();
         for (int i = 0; i < bestPathEdges.size(); i++) {
             EdgeIteratorState e = bestPathEdges.get(i);
-            // Follow whichever endpoint is NOT the current node
-            bestPathNodes[i + 1] = (e.getBaseNode() == bestPathNodes[i]) ? e.getAdjNode() : e.getBaseNode();
+            int from = bestPathNodes[i];
+            bestPathNodes[i + 1] = (e.getBaseNode() == from) ? e.getAdjNode() : e.getBaseNode();
         }
 
         // Build merged path by replacing bestPath sections with routed segments
@@ -475,14 +500,14 @@ public class RailwayMapMatching extends MapMatching {
             bpCursor++;
         }
 
-        // Validate merged path connectivity
+        // Validate merged path connectivity (baseNode=departure, adjNode=arrival for calcEdges() output)
         if (mergedPath.size() > 1) {
-            int prevNode = mergedPath.get(0).getBaseNode();
+            int prevNode = mergedPath.get(0).getBaseNode(); // baseNode = departure
             int discontinuities = 0;
             for (int i = 0; i < mergedPath.size(); i++) {
                 EdgeIteratorState e = mergedPath.get(i);
                 if (e.getBaseNode() == prevNode) {
-                    prevNode = e.getAdjNode();
+                    prevNode = e.getAdjNode(); // advance to arrival
                 } else if (e.getAdjNode() == prevNode) {
                     prevNode = e.getBaseNode();
                 } else {
@@ -845,12 +870,20 @@ public class RailwayMapMatching extends MapMatching {
             return null;
         }
         
-        // Build the merged path
+        List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
+        
         List<EdgeIteratorState> mergedPath = buildMergedEdgeList(
-                bestPath.calcEdges(), routingResult.perSegmentRoutedEdges, 
+                bestPathEdges, routingResult.perSegmentRoutedEdges, 
                 routingResult.segmentBoundaryNodes);
         
         System.out.println("Via-waypoint routing: successfully routed detour segments. Total merged edges=" + mergedPath.size());
+        
+        // Debug: Check merged path edges before creating MapMatchedPath
+        for (int i = 0; i < Math.min(5, mergedPath.size()); i++) {
+            EdgeIteratorState edge = mergedPath.get(i);
+            System.out.println("  Merged edge " + i + ": edgeId=" + edge.getEdge() + 
+                    ", baseNode=" + edge.getBaseNode() + ", adjNode=" + edge.getAdjNode());
+        }
         
         // Build edge matches
         List<EdgeMatch> edgeMatches = buildEdgeMatchesForMergedPath(
@@ -867,6 +900,20 @@ public class RailwayMapMatching extends MapMatching {
         
         printMergedPathGeoJson(mergedPath, observations.size(),
                 edgeMatches.stream().mapToInt(em -> em.getStates().size()).sum());
+        
+        // Debug: Log all edges in the merged path
+        System.err.println("DEBUG: Creating Via-waypoint MapMatchedPath with " + mergedPath.size() + " edges:");
+        for (int i = 0; i < mergedPath.size(); i++) {
+            EdgeIteratorState edge = mergedPath.get(i);
+            boolean isVirtual = edge.getEdge() >= graph.getEdges();
+            System.err.println("  Edge[" + i + "]: id=" + edge.getEdge() + 
+                    ", baseNode=" + edge.getBaseNode() + ", adjNode=" + edge.getAdjNode() +
+                    ", isVirtual=" + isVirtual);
+            if (edge.getEdge() == 22469425) {
+                System.err.println("    *** FOUND EDGE 22469425 at index " + i + " ***");
+                Thread.dumpStack();
+            }
+        }
         
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
         Path mergedMapMatchedPath = new MapMatchedPath(queryGraph, queryGraphWeighting, mergedPath);
@@ -1004,6 +1051,8 @@ public class RailwayMapMatching extends MapMatching {
             
                         
             Snap previousLegToSnap = null;
+            Snap previousLegFromSnap = null;
+            int previousLegEdgeCount = 0;
             boolean segmentSpliceable = true;
             
             for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
@@ -1102,13 +1151,19 @@ public class RailwayMapMatching extends MapMatching {
                     int curStartNode = bestFromSnap.getClosestNode();
                     boolean bridgeFound = false;
                     
+                    // Calculate suitable distance threshold for bridge (same as leg routing)
+                    GHPoint bridgeFromPoint = previousLegToSnap.getQueryPoint();
+                    GHPoint bridgeToPoint = bestFromSnap.getQueryPoint();
+                    double bridgeDirectDistance = DistanceCalcEarth.DIST_EARTH.calcDist(
+                            bridgeFromPoint.lat, bridgeFromPoint.lon, bridgeToPoint.lat, bridgeToPoint.lon);
+                    double bridgeSuitableThreshold = Math.max(bridgeDirectDistance * 2.0, bridgeDirectDistance + 2000.0);
+                    
                     try {
                         List<Path> intraBridge = router.calcPaths(queryGraph, prevEndNode, EdgeIterator.ANY_EDGE,
                                 new int[]{curStartNode}, new int[]{EdgeIterator.ANY_EDGE});
                         if (!intraBridge.isEmpty() && intraBridge.get(0).isFound()
-                                && intraBridge.get(0).getDistance() <= 20000) {
-                            List<EdgeIteratorState> bridgeEdges = intraBridge.get(0).calcEdges();
-                            segmentEdges.addAll(bridgeEdges);
+                                && intraBridge.get(0).getDistance() <= bridgeSuitableThreshold) {
+                            segmentEdges.addAll(intraBridge.get(0).calcEdges());
                             bridgeFound = true;
                         }
                     } catch (Exception e) {
@@ -1120,6 +1175,13 @@ public class RailwayMapMatching extends MapMatching {
                         System.out.println("  Intra-bridge routing failed with best snaps, trying all combinations between obs " + 
                                 fromOriginalIdx + " and " + toOriginalIdx + " (" + 
                                 allFromCandidates.size() + " × " + toCandidates.size() + " combinations)");
+                        
+                        // Calculate suitable distance threshold for bridge (same as leg routing)
+                        GHPoint retryFromPoint = allFromCandidates.get(0).getQueryPoint();
+                        GHPoint retryToPoint = toCandidates.get(0).getQueryPoint();
+                        double retryDirectDistance = DistanceCalcEarth.DIST_EARTH.calcDist(
+                                retryFromPoint.lat, retryFromPoint.lon, retryToPoint.lat, retryToPoint.lon);
+                        double retrySuitableThreshold = Math.max(retryDirectDistance * 2.0, retryDirectDistance + 2000.0);
                         
                         boolean foundValidBridge = false;
                         int bestDistance = Integer.MAX_VALUE;
@@ -1140,7 +1202,7 @@ public class RailwayMapMatching extends MapMatching {
                                 try {
                                     List<Path> bridge = router.calcPaths(queryGraph, fromSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
                                             new int[]{toSnap.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
-                                    if (!bridge.isEmpty() && bridge.get(0).isFound() && bridge.get(0).getDistance() <= 20000) {
+                                    if (!bridge.isEmpty() && bridge.get(0).isFound() && bridge.get(0).getDistance() <= retrySuitableThreshold) {
                                         if (bridge.get(0).getDistance() < bestDistance) {
                                             bestDistance = (int) bridge.get(0).getDistance();
                                             bestFromSnapRetry = fromSnap;
@@ -1159,49 +1221,34 @@ public class RailwayMapMatching extends MapMatching {
                             System.out.println("  Found valid bridge with alternative snaps: distance=" + bestDistance + "m" +
                                     " (from node " + bestFromSnapRetry.getClosestNode() + " to node " + bestToSnapRetry.getClosestNode() + ")");
                             
-                            // Re-route the current leg with the new snap
-                            if (bestToSnapRetry != bestToSnap) {
-                                // Need to re-route this leg with the new toSnap
-                                try {
-                                    List<Path> retryLegPaths = router.calcPaths(queryGraph, bestFromSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
-                                            new int[]{bestToSnapRetry.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
-                                    if (!retryLegPaths.isEmpty() && retryLegPaths.get(0).isFound()) {
-                                        Path retryLegPath = retryLegPaths.get(0);
-                                        // Replace the leg edges
-                                        segmentEdges.subList(segmentEdges.size() - bestLegPath.calcEdges().size(), segmentEdges.size()).clear();
-                                        List<EdgeIteratorState> retryLegEdges = retryLegPath.calcEdges();
-                                        segmentEdges.addAll(retryLegEdges);
-                                        bestLegPath = retryLegPath;
-                                        bestToSnap = bestToSnapRetry;
-                                        
-                                        // Update routedPathSnaps
-                                        if (toFilteredPos != null) {
-                                            routedPathSnaps.get(toFilteredPos).clear();
-                                            routedPathSnaps.get(toFilteredPos).add(bestToSnap);
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    System.out.println("  Failed to re-route leg with alternative snap: " + e.getMessage());
+                            // Add the bridge edges from previousLegToSnap -> bestFromSnapRetry
+                            boolean bridgeAdded = false;
+                            try {
+                                List<Path> finalBridge = router.calcPaths(queryGraph, previousLegToSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
+                                        new int[]{bestFromSnapRetry.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
+                                if (!finalBridge.isEmpty() && finalBridge.get(0).isFound()) {
+                                    segmentEdges.addAll(finalBridge.get(0).calcEdges());
+                                    System.out.println("  Successfully added bridge using alternative snaps");
+                                    bridgeAdded = true;
+                                } else {
+                                    System.out.println("  Failed to add bridge with alternative snaps, marking segment as unspliceable");
                                     segmentSpliceable = false;
                                 }
-                            }
-                            
-                            // Add the bridge edges
-                            if (bestFromSnapRetry != bestFromSnap) {
-                                // Need to re-route previous leg - too complex, mark as unspliceable
-                                System.out.println("  Would need to re-route previous leg, marking segment as unspliceable");
+                            } catch (Exception e) {
+                                System.out.println("  Failed to add bridge: " + e.getMessage());
                                 segmentSpliceable = false;
-                            } else {
-                                // Just add the bridge
+                            }
+                            // Re-route current leg from bestFromSnapRetry to maintain continuity
+                            if (bridgeAdded && bestFromSnapRetry.getClosestNode() != bestFromSnap.getClosestNode()) {
                                 try {
-                                    List<Path> finalBridge = router.calcPaths(queryGraph, previousLegToSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
-                                            new int[]{bestFromSnap.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
-                                    if (!finalBridge.isEmpty() && finalBridge.get(0).isFound()) {
-                                        segmentEdges.addAll(finalBridge.get(0).calcEdges());
+                                    List<Path> reroutedLeg = router.calcPaths(queryGraph, bestFromSnapRetry.getClosestNode(), EdgeIterator.ANY_EDGE,
+                                            new int[]{bestToSnap.getClosestNode()}, new int[]{EdgeIterator.ANY_EDGE});
+                                    if (!reroutedLeg.isEmpty() && reroutedLeg.get(0).isFound()) {
+                                        bestLegPath = reroutedLeg.get(0);
+                                        System.out.println("  Re-routed leg from bestFromSnapRetry node " + bestFromSnapRetry.getClosestNode());
                                     }
                                 } catch (Exception e) {
-                                    System.out.println("  Failed to add final bridge: " + e.getMessage());
-                                    segmentSpliceable = false;
+                                    // Keep original leg path if re-route fails
                                 }
                             }
                         } else {
@@ -1211,9 +1258,16 @@ public class RailwayMapMatching extends MapMatching {
                     }
                 }
                 
+                // Cache the leg edges to avoid multiple calcEdges() calls
                 List<EdgeIteratorState> legEdges = bestLegPath.calcEdges();
                 segmentEdges.addAll(legEdges);
+                
+                // Store the current leg's edge count for potential re-routing
+                int currentLegEdgeCount = legEdges.size();
+                
                 previousLegToSnap = bestToSnap;
+                previousLegFromSnap = bestFromSnap;
+                previousLegEdgeCount = currentLegEdgeCount;
             }
             
             // If segment has internal gaps (e.g. failed intra-bridge), mark unspliceable
@@ -1304,6 +1358,16 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
             
+            // Verify segment boundary nodes match actual edge endpoints
+            // calcEdges() returns edges where baseNode=departure, adjNode=arrival
+            if (!segmentEdges.isEmpty()) {
+                int actualStartNode = segmentEdges.get(0).getBaseNode();
+                int actualEndNode = segmentEdges.get(segmentEdges.size() - 1).getAdjNode();
+                System.err.println("DEBUG Segment " + segNum + ": boundary nodes=[" + segmentStartNode + "," + segmentEndNode + "]" +
+                        ", actual edge endpoints=[" + actualStartNode + "," + actualEndNode + "]" +
+                        ", segmentSize=" + segmentEdges.size());
+            }
+            
             perSegmentRoutedEdges.add(segmentEdges);
             segmentBoundaryNodes.add(new int[]{segmentStartNode, segmentEndNode});
             
@@ -1321,7 +1385,9 @@ public class RailwayMapMatching extends MapMatching {
                     }
                 }
                 double segmentDistance = 0;
-                for (EdgeIteratorState edge : segmentEdges) segmentDistance += edge.getDistance();
+                for (EdgeIteratorState edge : segmentEdges) {
+                    segmentDistance += edge.getDistance();
+                }
                 segmentGeoJson.append("]},\"properties\":{\"stroke\":\"#ff9900\",\"path_type\":\"via_waypoint_segment\",\"segment_index\":")
                         .append(segNum)
                         .append(",\"edges\":")
