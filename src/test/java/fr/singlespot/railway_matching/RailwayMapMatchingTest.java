@@ -5,12 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.geofabrik.railway_routing.http.RailwayRoutingApplication;
 import de.geofabrik.railway_routing.http.RailwayRoutingServerConfiguration;
 import io.dropwizard.testing.DropwizardTestSupport;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +16,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -1409,8 +1403,11 @@ public class RailwayMapMatchingTest {
      * Test map matching with full GPX track data
      */
     @Test
-    public void testFullGPXTrackMatching() {
-        runGPXTrackMatchingTest(FULL_GPX_DATA, "FULL_GPX_DATA");
+    public void testFullGPXTrackMatching() throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode expectedPaths = mapper.readTree(getClass().getResourceAsStream("/expected_paths_full_gpx.json"));
+        JsonNode expectedObservationIndexes =  mapper.readTree(getClass().getResourceAsStream("/expected_observation_indexes_full_gpx.json"));
+        runGPXTrackMatchingTest(FULL_GPX_DATA, "FULL_GPX_DATA", expectedPaths, expectedObservationIndexes);
     }
 
     /**
@@ -1418,7 +1415,7 @@ public class RailwayMapMatchingTest {
      */
     @Test
     public void testGPXDataAllPointsOnRoutedPaths() {
-        runGPXTrackMatchingTest(GPX_DATA_ALL_POINTS_ON_ROUTED_PATHS, "GPX_DATA_ALL_POINTS_ON_ROUTED_PATHS");
+        runGPXTrackMatchingTest(GPX_DATA_ALL_POINTS_ON_ROUTED_PATHS, "GPX_DATA_ALL_POINTS_ON_ROUTED_PATHS", null, null);
     }
 
     /**
@@ -1426,7 +1423,7 @@ public class RailwayMapMatchingTest {
      */
     @Test
     public void testGPXDataLigne3() {
-        runGPXTrackMatchingTest(GPX_Ligne3, "GPX_Ligne3");
+        runGPXTrackMatchingTest(GPX_Ligne3, "GPX_Ligne3", null, null);
     }
 
     /**
@@ -1434,13 +1431,13 @@ public class RailwayMapMatchingTest {
      */
     @Test
     public void testGPXDataParisCannes() {
-        runGPXTrackMatchingTest(GPX_Paris_Cannes, "GPX_DATA_PARIS_CANNES");
+        runGPXTrackMatchingTest(GPX_Paris_Cannes, "GPX_DATA_PARIS_CANNES", null, null);
     }
 
     /**
      * Common test method for GPX track matching
      */
-    private void runGPXTrackMatchingTest(String gpxData, String testName) {
+    private void runGPXTrackMatchingTest(String gpxData, String testName, JsonNode expectedPaths, JsonNode expectedObservationIndexes) {
         DropwizardTestSupport<RailwayRoutingServerConfiguration> app = new DropwizardTestSupport<>(RailwayRoutingApplication.class, new File("config.yml").getAbsolutePath());
         String graphLocationProperty = "dw.graphhopper.graph.location";
         String previousGraphLocation = System.getProperty(graphLocationProperty);
@@ -1457,7 +1454,10 @@ public class RailwayMapMatchingTest {
             JsonNode json = new ObjectMapper().readTree(response.body());
             JsonNode paths = json.get("paths");
             assertNotNull(paths, "Response should include 'paths' for " + testName);
-            assertTrue(paths.isArray() && paths.size() > 0, "Response should include at least one matched path for " + testName);
+            assertTrue(paths.isArray() && !paths.isEmpty(), "Response should include at least one matched path for " + testName);
+            if (expectedPaths != null) {
+                assertEquals(expectedPaths, paths, "Expected paths do not match for " + testName);
+            }
             assertTrue(paths.get(0).path("distance").asDouble() > 0, "Matched path distance should be > 0 for " + testName);
 
             JsonNode matching = json.get("map_matching");
@@ -1469,6 +1469,9 @@ public class RailwayMapMatchingTest {
             JsonNode observationIndexes = json.get("observation_indexes");
             if (observationIndexes != null) {
                 System.out.println("observation_indexes found for " + testName + ": " + observationIndexes.size() + " entries");
+                if (expectedObservationIndexes != null) {
+                    assertEquals(expectedObservationIndexes, observationIndexes, "Expected observation_indexes do not match for " + testName);
+                }
                 // Validate that observation indexes are non-negative
                 for (JsonNode idx : observationIndexes) {
                     if (idx.isArray() && idx.size() == 2) {
