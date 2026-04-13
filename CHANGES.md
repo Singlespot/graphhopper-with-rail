@@ -276,3 +276,30 @@ Reverted the Railway Map Matching logic to commit d4abbddd to restore better Geo
 - **Root cause**: `bestLegPath` was not updated after the alt-bridge changed the effective departure node for the current leg
 - **Solution**: After a successful alt-bridge, re-route the current leg departing from `bestFromSnapRetry` instead of `bestFromSnap`, ensuring the segment edge chain is unbroken
 - **Result**: Zero merged-path discontinuities; `testGPXDataParisCannes` passes (was throwing `IllegalStateException: Edge not found with adjNode`)
+
+## Prev-Leg Snap Fix (April 13, 2026)
+
+### Problem
+When routing an off-path leg (obs N → obs N+1), the chain from the previous leg could land on a dead-end spur node, making every route attempt from obs N to obs N+1 return an enormous detour (~122 km instead of ~7 km). The bridge pre-filter then discarded all non-spur snap candidates for obs N, leaving no valid from-node.
+
+**Concrete failure**: segment 0, leg 8 (obs 30→31) — all 25 snap candidates for obs 30 were bridge-filtered to only three nodes near dead-end 17427691/17427692, all routing 122 km to obs 31 (threshold: 12.8 km).
+
+### Solution: 2-Level Prev-Leg Snap Fix
+Runs after the waypoint-skip fallback, before the short-spur undo:
+
+1. **Step 1 — find a better obs-N snap**: Scan *all* snap candidates for the current from-observation (ignoring the bridge pre-filter) to find one that routes to the next observation within threshold. This yields `altFromSnap`.
+
+2. **Step 2 — build obs-(N-1) trial list**: Assemble a list of candidate from-nodes for the *previous* leg — `prevChainSnap` (the "old snap") first, then all alternative snaps for obs N-1 from `waypointAllSnapsMap`.
+
+3. **L1 (replace 1 leg)**: If `prevChainSnap → altFromSnap` is feasible, trim the last committed leg and replace it. Sets `suitablePathFound = true`.
+
+4. **L2 (replace 2 legs)**: If L1 fails (dead-end can't reach `altFromSnap` either), iterate over obs-(N-1) alternatives. For the first alternative `obs29alt` that routes to `altFromSnap`, check whether `prevPrevChainSnap → obs29alt` is also feasible. If so, trim the last **two** committed legs and replace them with the two new legs.
+
+### New Tracking Variables
+- `prevPrevChainSnap` — snap from 3 legs back (the "grandparent" chain node)
+- `prevPrevIterEdgeCount` — edge count of the leg 2 iterations back
+
+Both are maintained on every leg commit and cleared on short-spur undo.
+
+### Result
+**L2 triggered**: `17428963 → 25079 → 17429082` (143 m + 949 m), allowing obs 30→31→32 to route cleanly. Segment `end_node = 17427648` (valid bestPath splice node); full off-path segment covers 41.6 km across 72 edges. `testGPXDataParisCannes` passes.
