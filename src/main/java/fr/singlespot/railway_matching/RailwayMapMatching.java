@@ -16,17 +16,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-// Simple class to store edge information without iterator state
-class EdgeInfo {
-    final int edgeId;
-    final int adjNode;
-    
-    EdgeInfo(int edgeId, int adjNode) {
-        this.edgeId = edgeId;
-        this.adjNode = adjNode;
-    }
-}
-
 public class RailwayMapMatching extends MapMatching {
 
     // State from prepareQueryGraph(), consumed by match_with_routing()
@@ -382,20 +371,6 @@ public class RailwayMapMatching extends MapMatching {
 
         result = new MatchResult(prepareEdgeMatches(seq));
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
-        
-        // Debug: Log all edges in the merged path
-        System.err.println("DEBUG: Creating MapMatchedPath with " + path.size() + " edges:");
-        for (int i = 0; i < path.size(); i++) {
-            EdgeIteratorState edge = path.get(i);
-            boolean isVirtual = edge.getEdge() >= graph.getEdges();
-            System.err.println("  Edge[" + i + "]: id=" + edge.getEdge() + 
-                    ", baseNode=" + edge.getBaseNode() + ", adjNode=" + edge.getAdjNode() +
-                    ", isVirtual=" + isVirtual);
-            if (edge.getEdge() == 22469425) {
-                System.err.println("    *** FOUND EDGE 22469425 at index " + i + " ***");
-                Thread.dumpStack();
-            }
-        }
         
         result.setMergedPath(new MapMatchedPath(queryGraph, queryGraphWeighting, path));
         result.setMatchMillis(seq.stream().filter(s -> s.transitionDescriptor != null).mapToLong(s -> s.transitionDescriptor.getTime()).sum());
@@ -902,20 +877,6 @@ public class RailwayMapMatching extends MapMatching {
         printMergedPathGeoJson(mergedPath, observations.size(),
                 edgeMatches.stream().mapToInt(em -> em.getStates().size()).sum());
         
-        // Debug: Log all edges in the merged path
-        System.err.println("DEBUG: Creating Via-waypoint MapMatchedPath with " + mergedPath.size() + " edges:");
-        for (int i = 0; i < mergedPath.size(); i++) {
-            EdgeIteratorState edge = mergedPath.get(i);
-            boolean isVirtual = edge.getEdge() >= graph.getEdges();
-            System.err.println("  Edge[" + i + "]: id=" + edge.getEdge() + 
-                    ", baseNode=" + edge.getBaseNode() + ", adjNode=" + edge.getAdjNode() +
-                    ", isVirtual=" + isVirtual);
-            if (edge.getEdge() == 22469425) {
-                System.err.println("    *** FOUND EDGE 22469425 at index " + i + " ***");
-                Thread.dumpStack();
-            }
-        }
-        
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
         Path mergedMapMatchedPath = new MapMatchedPath(queryGraph, queryGraphWeighting, mergedPath);
         
@@ -1040,7 +1001,6 @@ public class RailwayMapMatching extends MapMatching {
             routedPathSnaps.add(new ArrayList<>());
         }
         boolean allSegmentsRouted = true;
-        
         for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
             // Check if we're exceeding time limit
             checkTimeLimit(sw);
@@ -1049,17 +1009,19 @@ public class RailwayMapMatching extends MapMatching {
             List<EdgeIteratorState> segmentEdges = new ArrayList<>();
             int segmentStartNode = -1;
             int segmentEndNode = -1;
-            
-                        
             Snap previousLegToSnap = null;
-            Snap previousLegFromSnap = null;
-            int previousLegEdgeCount = 0;
             boolean segmentSpliceable = true;
             
-            for (int wpIdx = 0; wpIdx < waypoints.size() - 1; wpIdx++) {
+            final double MAX_BRIDGE_DISTANCE = 20000;
+            Snap prevChainSnap = null;          // chain snap from 2 legs back
+            int lastIterEdgeCount = 0;           // edges committed in the last iteration
+            double lastLegRouteDist = 0;         // route distance of the last committed leg
+            int wpIdx = 0;
+            while (wpIdx < waypoints.size() - 1) {
                 // Check time limit in inner loop as well
                 checkTimeLimit(sw);
                 
+                int edgesAtIterStart = segmentEdges.size();
                 int fromOriginalIdx = waypoints.get(wpIdx);
                 int toOriginalIdx = waypoints.get(wpIdx + 1);
                 List<Snap> allFromCandidates = waypointAllSnapsMap.get(fromOriginalIdx);
@@ -1093,7 +1055,7 @@ public class RailwayMapMatching extends MapMatching {
                         fromPoint.lat, fromPoint.lon, toPoint.lat, toPoint.lon);
                 double suitableDistanceThreshold = Math.max(directDistance * 2.0, directDistance + 2000.0);
                 
-                // Find best path
+                // Find best path (with bridge pre-filtering for alt from-snaps)
                 Path bestLegPath = null;
                 Snap bestFromSnap = null;
                 Snap bestToSnap = null;
@@ -1101,6 +1063,22 @@ public class RailwayMapMatching extends MapMatching {
                 
                 for (Snap fromSnap : fromCandidates) {
                     int fromNode = fromSnap.getClosestNode();
+                    
+                    // Pre-check bridge feasibility for non-chained snaps to avoid choosing
+                    // a from-snap that would require an infeasible intra-bridge later
+                    if (wpIdx > 0 && previousLegToSnap != null
+                            && fromNode != previousLegToSnap.getClosestNode()) {
+                        boolean bridgeFeasible = false;
+                        try {
+                            List<Path> bridgeCheck = router.calcPaths(queryGraph,
+                                    previousLegToSnap.getClosestNode(), EdgeIterator.ANY_EDGE,
+                                    new int[]{fromNode}, new int[]{EdgeIterator.ANY_EDGE});
+                            bridgeFeasible = !bridgeCheck.isEmpty() && bridgeCheck.get(0).isFound()
+                                    && bridgeCheck.get(0).getDistance() <= MAX_BRIDGE_DISTANCE;
+                        } catch (Exception ignored) {}
+                        if (!bridgeFeasible) continue;
+                    }
+                    
                     for (Snap toSnap : toCandidates) {
                         int toNode = toSnap.getClosestNode();
                         if (fromNode == toNode) continue;
@@ -1128,11 +1106,66 @@ public class RailwayMapMatching extends MapMatching {
                     if (suitablePathFound) break;
                 }
                 
+                // Waypoint-skip fallback: if no suitable path found with any bridgeable from-snap,
+                // try routing from the chain directly to the next-next waypoint (bypass current to-waypoint)
+                if (!suitablePathFound && previousLegToSnap != null && wpIdx < waypoints.size() - 2) {
+                    int skipToOriginalIdx = waypoints.get(wpIdx + 2);
+                    List<Snap> skipToCandidates = waypointAllSnapsMap.get(skipToOriginalIdx);
+                    if (skipToCandidates != null) {
+                        if (skipToCandidates.size() > maxCandidates)
+                            skipToCandidates = skipToCandidates.subList(0, maxCandidates);
+                        int chainNode = previousLegToSnap.getClosestNode();
+                        GHPoint chainPoint = previousLegToSnap.getQueryPoint();
+                        GHPoint skipToPoint = skipToCandidates.get(0).getQueryPoint();
+                        double skipDirectDist = DistanceCalcEarth.DIST_EARTH.calcDist(
+                                chainPoint.lat, chainPoint.lon, skipToPoint.lat, skipToPoint.lon);
+                        double skipThreshold = Math.max(skipDirectDist * 2.0, skipDirectDist + 2000.0);
+                        for (Snap toSnap : skipToCandidates) {
+                            int toNode = toSnap.getClosestNode();
+                            if (chainNode == toNode) continue;
+                            try {
+                                List<Path> skipPaths = router.calcPaths(queryGraph, chainNode, EdgeIterator.ANY_EDGE,
+                                        new int[]{toNode}, new int[]{EdgeIterator.ANY_EDGE});
+                                if (!skipPaths.isEmpty() && skipPaths.get(0).isFound()
+                                        && skipPaths.get(0).getDistance() <= skipThreshold) {
+                                    bestLegPath = skipPaths.get(0);
+                                    bestFromSnap = previousLegToSnap;
+                                    bestToSnap = toSnap;
+                                    suitablePathFound = true;
+                                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] waypoint-skip obs " + toOriginalIdx + " -> routing chain to obs " + skipToOriginalIdx);
+                                    break;
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        if (suitablePathFound) {
+                            wpIdx++; // skip the failed to-waypoint
+                            toOriginalIdx = skipToOriginalIdx;
+                        }
+                    }
+                }
+                
+                // Short-spur undo: if no path found and the last committed leg was very short
+                // (chain landed at a dead-end spur), undo it and retry from the earlier chain
+                if (!suitablePathFound && lastLegRouteDist > 0 && lastLegRouteDist <= 500.0
+                        && lastIterEdgeCount > 0 && prevChainSnap != null
+                        && prevChainSnap.getClosestNode() != previousLegToSnap.getClosestNode()) {
+                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] short-spur undo: removing " + lastIterEdgeCount + " edges (last leg dist=" + String.format("%.0f", lastLegRouteDist) + "m), retrying from node " + prevChainSnap.getClosestNode());
+                    for (int r = 0; r < lastIterEdgeCount; r++) segmentEdges.remove(segmentEdges.size() - 1);
+                    previousLegToSnap = prevChainSnap;
+                    prevChainSnap = null;       // prevent double-undo
+                    lastIterEdgeCount = 0;
+                    lastLegRouteDist = 0;
+                    continue;                   // retry this wpIdx with updated chain
+                }
+                
                 if (!suitablePathFound) {
-                    System.out.println("Via-waypoint routing: no suitable path found for segment " + segNum);
+                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] no suitable path (obs " + fromOriginalIdx + " -> " + toOriginalIdx + "), dist=" + (bestLegPath != null ? String.format("%.0f", bestLegPath.getDistance()) : "null") + "m threshold=" + String.format("%.0f", suitableDistanceThreshold) + "m");
                     allSegmentsRouted = false;
                     break;
                 }
+                
+                boolean usedChainedSnap = (wpIdx > 0 && previousLegToSnap != null && bestFromSnap.getClosestNode() == previousLegToSnap.getClosestNode());
+                System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] obs " + fromOriginalIdx + " -> " + toOriginalIdx + ": from=" + bestFromSnap.getClosestNode() + (usedChainedSnap ? "(chained)" : "(alt)") + " to=" + bestToSnap.getClosestNode() + " dist=" + String.format("%.0f", bestLegPath.getDistance()) + "m");
                 
                 // Track boundary nodes
                 if (wpIdx == 0) segmentStartNode = bestFromSnap.getClosestNode();
@@ -1150,10 +1183,6 @@ public class RailwayMapMatching extends MapMatching {
                     
                     int prevEndNode = previousLegToSnap.getClosestNode();
                     int curStartNode = bestFromSnap.getClosestNode();
-                    boolean bridgeFound = false;
-                    
-                    // Use fixed 20000m threshold for intra-bridge (generous for rail routing)
-                    final double MAX_BRIDGE_DISTANCE = 20000;
                     
                     try {
                         List<Path> intraBridge = router.calcPaths(queryGraph, prevEndNode, EdgeIterator.ANY_EDGE,
@@ -1161,30 +1190,73 @@ public class RailwayMapMatching extends MapMatching {
                         if (!intraBridge.isEmpty() && intraBridge.get(0).isFound()
                                 && intraBridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
                             segmentEdges.addAll(intraBridge.get(0).calcEdges());
+                            System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge OK: " + prevEndNode + " -> " + curStartNode + " dist=" + String.format("%.0f", intraBridge.get(0).getDistance()) + "m");
                         } else {
+                            double bridgeDist = (!intraBridge.isEmpty() && intraBridge.get(0).isFound()) ? intraBridge.get(0).getDistance() : -1;
+                            System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge FAIL: " + prevEndNode + " -> " + curStartNode + " dist=" + String.format("%.0f", bridgeDist) + "m (limit=" + MAX_BRIDGE_DISTANCE + ")");
                             segmentSpliceable = false;
-                            allSegmentsRouted = false;
                         }
                     } catch (Exception e) {
+                        System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge EXCEPTION: " + prevEndNode + " -> " + curStartNode + " err=" + e.getMessage());
                         segmentSpliceable = false;
-                        allSegmentsRouted = false;
                     }
                     
                     if (!segmentSpliceable) break;
                 }
                 
-                // Cache the leg edges to avoid multiple calcEdges() calls
-                List<EdgeIteratorState> legEdges = bestLegPath.calcEdges();
-                segmentEdges.addAll(legEdges);
-                
-                // Store the current leg's edge count for potential re-routing
-                int currentLegEdgeCount = legEdges.size();
-                
+                segmentEdges.addAll(bestLegPath.calcEdges());
+                prevChainSnap = previousLegToSnap;
                 previousLegToSnap = bestToSnap;
-                previousLegFromSnap = bestFromSnap;
-                previousLegEdgeCount = currentLegEdgeCount;
+                lastIterEdgeCount = segmentEdges.size() - edgesAtIterStart;
+                lastLegRouteDist = bestLegPath.getDistance();
+                wpIdx++;
             }
             
+            // Salvage partial segment: if the leg loop exited early but committed edges exist,
+            // find the last edge arrival in segmentEdges that is already in bestPathNodeSet.
+            // Trim the segment there so no walk-forward bridge is needed.
+            if (segmentSpliceable && !segmentEdges.isEmpty() && segmentEndNode == -1 && previousLegToSnap != null) {
+                int candidateEndNode = previousLegToSnap.getClosestNode();
+                if (bestPathNodeSet.contains(candidateEndNode)) {
+                    segmentEndNode = candidateEndNode;
+                } else {
+                    // Scan segment edges for the last arrival that is on the bestPath
+                    int prevNode = segmentEdges.get(0).getBaseNode();
+                    int foundNode = -1;
+                    int trimToEdge = -1;
+                    for (int e = 0; e < segmentEdges.size(); e++) {
+                        EdgeIteratorState edge = segmentEdges.get(e);
+                        int arrival = (edge.getBaseNode() == prevNode) ? edge.getAdjNode() : edge.getBaseNode();
+                        if (bestPathNodeSet.contains(arrival)) {
+                            foundNode = arrival;
+                            trimToEdge = e;
+                        }
+                        prevNode = arrival;
+                    }
+                    if (foundNode >= 0) {
+                        while (segmentEdges.size() > trimToEdge + 1) segmentEdges.remove(segmentEdges.size() - 1);
+                        segmentEndNode = foundNode;
+                        System.out.println("  Segment end trimmed: last bestPath node in segment=" + segmentEndNode + " (edge " + trimToEdge + ")");
+                    } else {
+                        // Fall back: seed from chain end and let walk-forward splice attempt
+                        segmentEndNode = candidateEndNode;
+                        // Diagnostics: log the last 5 arrival nodes to understand why none matched bestPathNodeSet
+                        StringBuilder dbg = new StringBuilder("  Segment end candidate=" + segmentEndNode + " (not in bestPath). Last 5 arrivals: ");
+                        int prevNode2 = segmentEdges.get(0).getBaseNode();
+                        List<Integer> arrivals = new ArrayList<>();
+                        for (EdgeIteratorState edge : segmentEdges) {
+                            int arr = (edge.getBaseNode() == prevNode2) ? edge.getAdjNode() : edge.getBaseNode();
+                            arrivals.add(arr);
+                            prevNode2 = arr;
+                        }
+                        for (int i = Math.max(0, arrivals.size() - 5); i < arrivals.size(); i++) {
+                            dbg.append(arrivals.get(i)).append("(bp=").append(bestPathNodeSet.contains(arrivals.get(i))).append(") ");
+                        }
+                        System.out.println(dbg);
+                    }
+                }
+            }
+
             // If segment has internal gaps (e.g. failed intra-bridge), mark unspliceable
             if (!segmentSpliceable) {
                 segmentStartNode = -1;
@@ -1273,16 +1345,6 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
             
-            // Verify segment boundary nodes match actual edge endpoints
-            // calcEdges() returns edges where baseNode=departure, adjNode=arrival
-            if (!segmentEdges.isEmpty()) {
-                int actualStartNode = segmentEdges.get(0).getBaseNode();
-                int actualEndNode = segmentEdges.get(segmentEdges.size() - 1).getAdjNode();
-                System.err.println("DEBUG Segment " + segNum + ": boundary nodes=[" + segmentStartNode + "," + segmentEndNode + "]" +
-                        ", actual edge endpoints=[" + actualStartNode + "," + actualEndNode + "]" +
-                        ", segmentSize=" + segmentEdges.size());
-            }
-            
             perSegmentRoutedEdges.add(segmentEdges);
             segmentBoundaryNodes.add(new int[]{segmentStartNode, segmentEndNode});
             
@@ -1321,6 +1383,12 @@ public class RailwayMapMatching extends MapMatching {
                 System.out.println("Via-waypoint Segment #" + segNum + " GeoJSON: " + segmentGeoJson);
             }
             
+            // If splice attempts left either boundary invalid, prevent Viterbi fallback:
+            // the segment is simply unspliceable and buildMergedEdgeList will use bestPath instead
+            if (segmentStartNode == -1 || segmentEndNode == -1) {
+                allSegmentsRouted = true;
+            }
+
             if (!allSegmentsRouted) break;
         }
         
