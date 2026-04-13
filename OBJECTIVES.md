@@ -13,6 +13,7 @@
 
 ## Relevant test
 - `testFullGPXTrackMatching` in RailwayMapMatchingTest.java
+- `testGPXDataParisCannes` in RailwayMapMatchingTest.java
 
 ## Implementation Strategies
 
@@ -21,11 +22,11 @@
 - Route individual segments for off-path observations
 - Merge bestPath with routed segments directly
 - **Pros**: Faster, bypasses expensive Viterbi computation
-- **Cons**: Risk of node reference issues, must ensure compatibility
+- **Cons**: Risk of node reference issues, must ensure compatibility, achieved through using same QueryGraph
 
 ## Key Constraints
 - Must complete within 60 seconds (test timeout)
-- Must handle 206 observations efficiently
+- Must handle all observations efficiently
 - Must avoid mixing edges from different routing contexts
 - Must ensure all node references are valid
 
