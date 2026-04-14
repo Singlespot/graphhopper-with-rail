@@ -1149,10 +1149,10 @@ public class RailwayMapMatching extends MapMatching {
                 // Prev-leg snap fix: if all bridge-feasible from-candidates fail, scan ALL
                 // from-candidates for the current obs (ignoring bridge pre-filter). If one
                 // routes to the next obs within threshold, re-route one or two previous legs:
-                //   L1: prevChainSnap (obs-29 old snap) -> altFromSnap (obs-30 new snap)
-                //   L2: prevPrevChainSnap -> obs-29-alt -> altFromSnap (replace 2 legs)
+                //   L1: prevChainSnap (prev-leg chain snap) -> altFromSnap (alt current-leg snap)
+                //   L2: prevPrevChainSnap -> prevLegTrial (alt prev-leg snap) -> altFromSnap (replace 2 legs)
                 if (!suitablePathFound && prevChainSnap != null && lastIterEdgeCount > 0) {
-                    // Step 1: find an alt obs-30 snap that routes to obs-31 within threshold
+                    // Step 1: find an alt current-leg from-snap that routes to the next obs within threshold
                     List<Snap> allFromCandsFull = waypointAllSnapsMap.get(fromOriginalIdx);
                     Snap altFromSnap = null;
                     Path altCurrentPath = null;
@@ -1179,33 +1179,33 @@ public class RailwayMapMatching extends MapMatching {
                     }
                     if (altFromSnap != null) {
                         int altFromNode = altFromSnap.getClosestNode();
-                        // Step 2: build obs-29 trial list: current chain snap first, then alternatives
-                        List<Snap> obs29Trials = new ArrayList<>();
-                        obs29Trials.add(prevChainSnap);
-                        List<Snap> obs29AllCands = waypointAllSnapsMap.get(waypoints.get(wpIdx - 1));
-                        if (obs29AllCands != null) {
-                            for (Snap s : obs29AllCands) {
+                        // Step 2: build prev-leg from-trial list: current chain snap first, then alternatives
+                        List<Snap> prevLegFromTrials = new ArrayList<>();
+                        prevLegFromTrials.add(prevChainSnap);
+                        List<Snap> prevLegAllCands = waypointAllSnapsMap.get(waypoints.get(wpIdx - 1));
+                        if (prevLegAllCands != null) {
+                            for (Snap s : prevLegAllCands) {
                                 if (s.getClosestNode() != prevChainSnap.getClosestNode())
-                                    obs29Trials.add(s);
+                                    prevLegFromTrials.add(s);
                             }
                         }
-                        for (Snap obs29Trial : obs29Trials) {
-                            int obs29Node = obs29Trial.getClosestNode();
-                            GHPoint obs29Pt = obs29Trial.getQueryPoint();
+                        for (Snap prevLegTrial : prevLegFromTrials) {
+                            int prevLegNode = prevLegTrial.getClosestNode();
+                            GHPoint prevLegPt = prevLegTrial.getQueryPoint();
                             GHPoint altFromPt = altFromSnap.getQueryPoint();
                             double legDirect = DistanceCalcEarth.DIST_EARTH.calcDist(
-                                    obs29Pt.lat, obs29Pt.lon, altFromPt.lat, altFromPt.lon);
+                                    prevLegPt.lat, prevLegPt.lon, altFromPt.lat, altFromPt.lon);
                             double legThresh = Math.max(legDirect * 2.0, legDirect + 2000.0);
                             Path legPath = null;
                             try {
-                                List<Path> pp = router.calcPaths(queryGraph, obs29Node, EdgeIterator.ANY_EDGE,
+                                List<Path> pp = router.calcPaths(queryGraph, prevLegNode, EdgeIterator.ANY_EDGE,
                                         new int[]{altFromNode}, new int[]{EdgeIterator.ANY_EDGE});
                                 if (!pp.isEmpty() && pp.get(0).isFound() && pp.get(0).getDistance() <= legThresh)
                                     legPath = pp.get(0);
                             } catch (Exception ignored) {}
                             if (legPath == null) continue;
 
-                            if (obs29Node == prevChainSnap.getClosestNode()) {
+                            if (prevLegNode == prevChainSnap.getClosestNode()) {
                                 // L1: prevChainSnap -> altFromSnap (replace last leg only)
                                 while (segmentEdges.size() > edgesAtIterStart - lastIterEdgeCount)
                                     segmentEdges.remove(segmentEdges.size() - 1);
@@ -1217,19 +1217,19 @@ public class RailwayMapMatching extends MapMatching {
                                 bestToSnap = altToSnap;
                                 suitablePathFound = true;
                                 System.out.println("  [Seg " + segNum + " leg " + wpIdx
-                                    + "] prev-leg snap fix L1: " + obs29Node + "->" + altFromNode
+                                    + "] prev-leg snap fix L1: " + prevLegNode + "->" + altFromNode
                                     + " (" + String.format("%.0f", legPath.getDistance()) + "m)");
                                 break;
                             } else if (prevPrevChainSnap != null && prevPrevIterEdgeCount > 0) {
-                                // L2: prevPrevChainSnap -> obs29Trial -> altFromSnap (replace 2 legs)
+                                // L2: prevPrevChainSnap -> prevLegTrial -> altFromSnap (replace 2 legs)
                                 int ppNode = prevPrevChainSnap.getClosestNode();
                                 GHPoint ppPt = prevPrevChainSnap.getQueryPoint();
                                 double ppDirect = DistanceCalcEarth.DIST_EARTH.calcDist(
-                                        ppPt.lat, ppPt.lon, obs29Pt.lat, obs29Pt.lon);
+                                        ppPt.lat, ppPt.lon, prevLegPt.lat, prevLegPt.lon);
                                 double ppThresh = Math.max(ppDirect * 2.0, ppDirect + 2000.0);
                                 try {
                                     List<Path> ppPaths = router.calcPaths(queryGraph, ppNode, EdgeIterator.ANY_EDGE,
-                                            new int[]{obs29Node}, new int[]{EdgeIterator.ANY_EDGE});
+                                            new int[]{prevLegNode}, new int[]{EdgeIterator.ANY_EDGE});
                                     if (!ppPaths.isEmpty() && ppPaths.get(0).isFound()
                                             && ppPaths.get(0).getDistance() <= ppThresh) {
                                         while (segmentEdges.size() > edgesAtIterStart - lastIterEdgeCount - prevPrevIterEdgeCount)
@@ -1243,7 +1243,7 @@ public class RailwayMapMatching extends MapMatching {
                                         bestToSnap = altToSnap;
                                         suitablePathFound = true;
                                         System.out.println("  [Seg " + segNum + " leg " + wpIdx
-                                            + "] prev-leg snap fix L2: " + ppNode + "->" + obs29Node + "->" + altFromNode
+                                            + "] prev-leg snap fix L2: " + ppNode + "->" + prevLegNode + "->" + altFromNode
                                             + " (" + String.format("%.0f", ppPaths.get(0).getDistance()) + "m + "
                                             + String.format("%.0f", legPath.getDistance()) + "m)");
                                         break;

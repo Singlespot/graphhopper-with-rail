@@ -289,11 +289,11 @@ Runs after the waypoint-skip fallback, before the short-spur undo:
 
 1. **Step 1 — find a better obs-N snap**: Scan *all* snap candidates for the current from-observation (ignoring the bridge pre-filter) to find one that routes to the next observation within threshold. This yields `altFromSnap`.
 
-2. **Step 2 — build obs-(N-1) trial list**: Assemble a list of candidate from-nodes for the *previous* leg — `prevChainSnap` (the "old snap") first, then all alternative snaps for obs N-1 from `waypointAllSnapsMap`.
+2. **Step 2 — build prev-leg from-trial list**: Assemble a list of candidate from-nodes for the *previous* leg — `prevChainSnap` (the "old snap") first, then all alternative snaps for obs N-1 from `waypointAllSnapsMap`.
 
 3. **L1 (replace 1 leg)**: If `prevChainSnap → altFromSnap` is feasible, trim the last committed leg and replace it. Sets `suitablePathFound = true`.
 
-4. **L2 (replace 2 legs)**: If L1 fails (dead-end can't reach `altFromSnap` either), iterate over obs-(N-1) alternatives. For the first alternative `obs29alt` that routes to `altFromSnap`, check whether `prevPrevChainSnap → obs29alt` is also feasible. If so, trim the last **two** committed legs and replace them with the two new legs.
+4. **L2 (replace 2 legs)**: If L1 fails (dead-end can't reach `altFromSnap` either), iterate over prev-leg alternatives (`prevLegFromTrials`). For the first `prevLegTrial` that routes to `altFromSnap`, check whether `prevPrevChainSnap → prevLegTrial` is also feasible. If so, trim the last **two** committed legs and replace them with the two new legs.
 
 ### New Tracking Variables
 - `prevPrevChainSnap` — snap from 3 legs back (the "grandparent" chain node)
