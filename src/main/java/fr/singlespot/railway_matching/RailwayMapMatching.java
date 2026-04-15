@@ -1503,6 +1503,7 @@ public class RailwayMapMatching extends MapMatching {
         // Start anchor walk-back
         if (result.startNode >= 0 && !bestPathNodeSet.contains(result.startNode)) {
             int anchorFiltPos = waypoints.get(0);
+            GHPoint startNodePoint = filteredObservations.get(anchorFiltPos).getPoint();
             boolean spliceFound = false;
             for (int wb = anchorFiltPos; wb >= 0 && !spliceFound; wb--) {
                 if (offPathSet.contains(wb)) continue;
@@ -1514,14 +1515,16 @@ public class RailwayMapMatching extends MapMatching {
                     try {
                         List<Path> bridge = router.calcPaths(queryGraph, spliceNode, EdgeIterator.ANY_EDGE,
                                 new int[]{result.startNode}, new int[]{EdgeIterator.ANY_EDGE});
+                        double spliceThreshold = routingThreshold(bpSnap.getQueryPoint(), startNodePoint);
                         if (!bridge.isEmpty() && bridge.get(0).isFound()
-                                && bridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
+                                && bridge.get(0).getDistance() <= spliceThreshold) {
                             List<EdgeIteratorState> bridgeEdges = bridge.get(0).calcEdges();
                             result.edges.addAll(0, bridgeEdges);
                             System.out.println("  Walk-back splice (start): obs " +
                                     filteredObservations.get(wb).getPoint().index +
                                     " -> segment start, bridge=" + bridgeEdges.size() +
-                                    " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m");
+                                    " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m" +
+                                    " (threshold=" + String.format("%.0f", spliceThreshold) + "m)");
                             result.startNode = spliceNode;
                             spliceFound = true;
                             break;
@@ -1538,6 +1541,7 @@ public class RailwayMapMatching extends MapMatching {
         // End anchor walk-forward
         if (result.endNode >= 0 && !bestPathNodeSet.contains(result.endNode)) {
             int anchorFiltPos = waypoints.get(waypoints.size() - 1);
+            GHPoint endNodePoint = filteredObservations.get(anchorFiltPos).getPoint();
             boolean spliceFound = false;
             for (int wf = anchorFiltPos; wf < filteredObservations.size() && !spliceFound; wf++) {
                 if (offPathSet.contains(wf)) continue;
@@ -1549,14 +1553,16 @@ public class RailwayMapMatching extends MapMatching {
                     try {
                         List<Path> bridge = router.calcPaths(queryGraph, result.endNode, EdgeIterator.ANY_EDGE,
                                 new int[]{spliceNode}, new int[]{EdgeIterator.ANY_EDGE});
+                        double spliceThreshold = routingThreshold(endNodePoint, bpSnap.getQueryPoint());
                         if (!bridge.isEmpty() && bridge.get(0).isFound()
-                                && bridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
+                                && bridge.get(0).getDistance() <= spliceThreshold) {
                             List<EdgeIteratorState> bridgeEdges = bridge.get(0).calcEdges();
                             result.edges.addAll(bridgeEdges);
                             System.out.println("  Walk-forward splice (end): segment end -> obs " +
                                     filteredObservations.get(wf).getPoint().index +
                                     ", bridge=" + bridgeEdges.size() +
-                                    " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m");
+                                    " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m" +
+                                    " (threshold=" + String.format("%.0f", spliceThreshold) + "m)");
                             result.endNode = spliceNode;
                             spliceFound = true;
                             break;

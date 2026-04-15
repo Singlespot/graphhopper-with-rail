@@ -353,3 +353,16 @@ return ViaWaypointRoutingResult
 - **Before**: ~450 lines in one method
 - **After**: 55-line orchestrator + 6 helpers (each 20–90 lines)
 - No functional changes; `testGPXDataParisCannes` passes.
+
+## Walk-Back/Forward Splice Threshold Fix (April 15, 2026)
+
+### Problem
+`spliceSegmentBoundaries` used a fixed `MAX_BRIDGE_DISTANCE` (20 km) cap for walk-back and walk-forward splice bridges, while leg routing used `routingThreshold()` (2× direct GPS distance). For long off-path segments (e.g. Brest–Paris leg 0: 27,885 m), the splice bridge could exceed 20 km even though it was within the reasonable routing threshold, causing "WARNING: could not find walk-back splice for start of segment 0" and marking the segment unspliceable.
+
+### Solution
+Replaced `MAX_BRIDGE_DISTANCE` with `routingThreshold()` in both walk-back and walk-forward splice checks:
+- **Walk-back**: `routingThreshold(bpSnap.getQueryPoint(), startNodePoint)` — threshold from on-path snap to segment start observation
+- **Walk-forward**: `routingThreshold(endNodePoint, bpSnap.getQueryPoint())` — threshold from segment end observation to on-path snap
+
+### Impact
+Splice bridges are now accepted up to the same distance threshold used by leg routing, consistent with the rest of the via-waypoint routing pipeline. Long-distance off-path segments (like Brest–Paris) can now be successfully spliced back onto the best path.
