@@ -1388,6 +1388,8 @@ public class RailwayMapMatchingTest {
 
     private static final String GPX_Paris_Cannes = readGPXFile("/home/laurent/IdeaProjects/graphhopper-with-rail/src/test/resources/GPX_Paris_Cannes.xml");
 
+    private static final String GPX_Brest_Paris = readGPXFile("/home/laurent/IdeaProjects/graphhopper-with-rail/src/test/resources/GPX_Brest_Paris.xml");
+
     /**
      * Read GPX file content as string
      */
@@ -1433,6 +1435,16 @@ public class RailwayMapMatchingTest {
     public void testGPXDataParisCannes() {
         runGPXTrackMatchingTest(GPX_Paris_Cannes, "GPX_DATA_PARIS_CANNES", null, null);
     }
+
+    /**
+     * Test map matching for brest paris
+     */
+    @Test
+    public void testGPXDataBrestParis() {
+        runGPXTrackMatchingTest(GPX_Brest_Paris, "GPX_DATA_BREST_PARIS", null, null);
+    }
+
+
 
     /**
      * Common test method for GPX track matching

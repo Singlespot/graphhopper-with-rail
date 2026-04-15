@@ -913,6 +913,19 @@ public class RailwayMapMatching extends MapMatching {
     }
 
     /**
+     * Mutable result of routing all legs within one off-path segment.
+     * Fields are updated in place by salvage and splice steps.
+     */
+    private static class SegmentResult {
+        final List<EdgeIteratorState> edges = new ArrayList<>();
+        int startNode = -1;
+        int endNode   = -1;
+        boolean spliceable    = true;
+        boolean allLegsRouted = true;
+        Snap lastToSnap = null;  // to-snap of the last committed leg (used by salvage)
+    }
+
+    /**
      * Result of via-waypoint routing
      */
     private static class ViaWaypointRoutingResult {
@@ -931,7 +944,15 @@ public class RailwayMapMatching extends MapMatching {
     }
     
     /**
-     * Performs the actual via-waypoint routing through off-path segments
+     * Routes each contiguous off-path segment via chained waypoint legs and splices the results
+     * back onto the best path.
+     *
+     * <p>Steps for each segment:
+     * <ol>
+     *   <li>Route all waypoint-to-waypoint legs ({@link #routeSegmentLegs}).</li>
+     *   <li>Salvage a partial segment if the leg loop exits early ({@link #salvagePartialSegment}).</li>
+     *   <li>Bridge segment boundaries onto the best path ({@link #spliceSegmentBoundaries}).</li>
+     * </ol>
      */
     private ViaWaypointRoutingResult performViaWaypointRouting(
             List<Integer> observationsNotOnBestPathIndices,
@@ -940,451 +961,47 @@ public class RailwayMapMatching extends MapMatching {
             List<List<Snap>> bestPathSnaps,
             List<List<Snap>> snapsPerObservationTmp,
             StopWatch sw) {
-        
-        Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnBestPathIndices);
-        
-        // Identify contiguous off-path segments
-        List<List<Integer>> offPathSegments = computeOffPathSegments(observationsNotOnBestPathIndices);
 
-        // Build waypoint lists for each segment
+        Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnBestPathIndices);
+        List<List<Integer>> offPathSegments       = computeOffPathSegments(observationsNotOnBestPathIndices);
         List<List<Integer>> segmentWaypointIndices = buildWaypointsList(filteredObservations, offPathSegments, offPathSet);
 
-        // Validate that every waypoint has snaps; log snap details for each
-        Set<Integer> loggedFilteredPos = new HashSet<>();
-        for (List<Integer> waypoints : segmentWaypointIndices) {
-            for (int filteredPos : waypoints) {
-                if (!loggedFilteredPos.add(filteredPos)) continue;
-                List<Snap> candidateSnaps = snapsPerObservationTmp.get(filteredPos);
-                if (candidateSnaps == null || candidateSnaps.isEmpty()) {
-                    System.out.println("Via-waypoint routing: some waypoints have no snaps");
-                    return new ViaWaypointRoutingResult(false, null, null, null);
-                }
-                Observation obs = filteredObservations.get(filteredPos);
-                Snap closestSnap = candidateSnaps.get(0);
-                boolean isOffPath = offPathSet.contains(filteredPos);
-                System.out.println("  Obs " + obs.getPoint().index + (isOffPath ? " [OFF-PATH]" : " [ON-PATH anchor]") +
-                        ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
-                        " -> snapped to node " + closestSnap.getClosestNode() +
-                        " at " + closestSnap.getSnappedPoint().lat + "," + closestSnap.getSnappedPoint().lon +
-                        " on edge " + closestSnap.getClosestEdge().getEdge() +
-                        " (name=" + closestSnap.getClosestEdge().getName() + ")" +
-                        " dist=" + String.format("%.1f", closestSnap.getQueryDistance()) + "m" +
-                        " (" + candidateSnaps.size() + " candidates)");
-            }
-        }
-        
-        // Route each segment
-        List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
-        Set<Integer> bestPathNodeSet = new HashSet<>();
-        if (!bestPathEdges.isEmpty()) {
-            int prevNode = bestPathEdges.get(0).getBaseNode();
-            bestPathNodeSet.add(prevNode);
-            for (EdgeIteratorState e : bestPathEdges) {
-                int nextNode = (e.getBaseNode() == prevNode) ? e.getAdjNode() : e.getBaseNode();
-                bestPathNodeSet.add(nextNode);
-                prevNode = nextNode;
-            }
-        }
-        
+        if (!validateAndLogWaypointSnaps(segmentWaypointIndices, snapsPerObservationTmp, filteredObservations, offPathSet))
+            return new ViaWaypointRoutingResult(false, null, null, null);
+
+        Set<Integer> bestPathNodeSet = buildBestPathNodeSet(bestPath);
+
         List<List<EdgeIteratorState>> perSegmentRoutedEdges = new ArrayList<>();
-        List<int[]> segmentBoundaryNodes = new ArrayList<>();
-        List<List<Snap>> routedPathSnaps = new ArrayList<>();
-        for (int i = 0; i < filteredObservations.size(); i++) {
-            routedPathSnaps.add(new ArrayList<>());
-        }
+        List<int[]>       segmentBoundaryNodes = new ArrayList<>();
+        List<List<Snap>>  routedPathSnaps      = new ArrayList<>();
+        for (int i = 0; i < filteredObservations.size(); i++) routedPathSnaps.add(new ArrayList<>());
+
         boolean allSegmentsRouted = true;
         for (int segNum = 0; segNum < segmentWaypointIndices.size(); segNum++) {
-            // Check if we're exceeding time limit
             checkTimeLimit(sw);
-            
             List<Integer> waypoints = segmentWaypointIndices.get(segNum);
-            List<EdgeIteratorState> segmentEdges = new ArrayList<>();
-            int segmentStartNode = -1;
-            int segmentEndNode = -1;
-            Snap previousLegToSnap = null;
-            boolean segmentSpliceable = true;
-            
-            Snap prevChainSnap = null;          // to-snap from 2 legs back
-            Snap prevPrevChainSnap = null;       // to-snap from 3 legs back
-            int lastIterEdgeCount = 0;           // edges committed in the previous leg
-            int prevPrevIterEdgeCount = 0;       // edges committed in the leg before that
-            double lastLegRouteDist = 0;         // route distance of the previous committed leg
-            int anchorBackSteps = 0;             // start-anchor back-step counter
-            int wpIdx = 0;
-            while (wpIdx < waypoints.size() - 1) {
-                checkTimeLimit(sw);
 
-                int edgesAtIterStart = segmentEdges.size();
-                int fromFilteredPos  = waypoints.get(wpIdx);
-                int toFilteredPos    = waypoints.get(wpIdx + 1);
+            SegmentResult result = routeSegmentLegs(waypoints, snapsPerObservationTmp,
+                    filteredObservations, offPathSet, routedPathSnaps, segNum, sw);
 
-                List<Snap> allFromCandidates = limit(snapsPerObservationTmp.get(fromFilteredPos), MAX_SNAP_CANDIDATES);
-                List<Snap> toCandidates      = limit(snapsPerObservationTmp.get(toFilteredPos),   MAX_SNAP_CANDIDATES);
-                List<Snap> fromCandidates    = buildChainedFromCandidates(allFromCandidates, previousLegToSnap);
-                double threshold             = routingThreshold(fromCandidates.get(0).getQueryPoint(),
-                                                                toCandidates.get(0).getQueryPoint());
-                int chainNode                = (previousLegToSnap != null) ? previousLegToSnap.getClosestNode() : -1;
+            if (!result.spliceable) { result.startNode = -1; result.endNode = -1; }
 
-                // --- Primary routing: best (from, to) snap pair within threshold.
-                // Non-chained from-snaps are bridge-pre-filtered to prevent infeasible intra-bridges. ---
-                LegResult leg = findBestLeg(fromCandidates, toCandidates, chainNode, threshold);
+            salvagePartialSegment(result, bestPathNodeSet);
 
-                // --- Fallback 1: Waypoint-skip ---
-                // Route the chain directly to waypoints[wpIdx+2], bypassing the unreachable waypoints[wpIdx+1].
-                if (leg == null && previousLegToSnap != null && wpIdx < waypoints.size() - 2) {
-                    int skipToFilteredPos     = waypoints.get(wpIdx + 2);
-                    List<Snap> skipCandidates = limit(snapsPerObservationTmp.get(skipToFilteredPos), MAX_SNAP_CANDIDATES);
-                    if (!skipCandidates.isEmpty()) {
-                        double skipThreshold = routingThreshold(
-                                previousLegToSnap.getQueryPoint(), skipCandidates.get(0).getQueryPoint());
-                        for (Snap toSnap : skipCandidates) {
-                            Path p = tryRoute(previousLegToSnap.getClosestNode(), toSnap.getClosestNode());
-                            if (p != null && p.getDistance() <= skipThreshold) {
-                                System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] waypoint-skip obs "
-                                        + filteredObservations.get(toFilteredPos).getPoint().index
-                                        + " -> routing chain to obs "
-                                        + filteredObservations.get(skipToFilteredPos).getPoint().index);
-                                leg           = new LegResult(p, previousLegToSnap, toSnap);
-                                wpIdx++;              // skip the unreachable waypoint
-                                toFilteredPos = skipToFilteredPos;
-                                break;
-                            }
-                        }
-                    }
-                }
+            if (result.spliceable)
+                spliceSegmentBoundaries(result, waypoints, bestPathNodeSet,
+                        bestPathSnaps, filteredObservations, offPathSet, segNum);
 
-                // --- Fallback 2: Prev-leg snap fix (L1 / L2) ---
-                // The bridge pre-filter may have locked all from-snaps to a dead-end node.
-                // Scan ALL from-snap candidates (ignoring the pre-filter) for one that reaches the next obs.
-                // If found (altLeg), re-route the last 1 leg (L1) or 2 legs (L2) to reach that better from-snap.
-                if (leg == null && prevChainSnap != null && lastIterEdgeCount > 0) {
-                    // Step 1: find an alt from-snap for the current leg that routes to the next obs
-                    LegResult altLeg = null;
-                    outer:
-                    for (Snap cand : snapsPerObservationTmp.get(fromFilteredPos)) {
-                        if (cand.getClosestNode() == previousLegToSnap.getClosestNode()) continue;
-                        for (Snap toSnap : toCandidates) {
-                            Path p = tryRoute(cand.getClosestNode(), toSnap.getClosestNode());
-                            if (p != null && p.getDistance() <= threshold) {
-                                altLeg = new LegResult(p, cand, toSnap);
-                                break outer;
-                            }
-                        }
-                    }
-                    if (altLeg != null) {
-                        int altFromNode = altLeg.fromSnap.getClosestNode();
-                        // Step 2: build trial list for the previous leg (chain snap first, then alternatives)
-                        List<Snap> prevLegFromTrials = new ArrayList<>();
-                        prevLegFromTrials.add(prevChainSnap);
-                        List<Snap> prevLegAllCands = snapsPerObservationTmp.get(waypoints.get(wpIdx - 1));
-                        if (prevLegAllCands != null)
-                            for (Snap s : prevLegAllCands)
-                                if (s.getClosestNode() != prevChainSnap.getClosestNode())
-                                    prevLegFromTrials.add(s);
-                        for (Snap prevLegTrial : prevLegFromTrials) {
-                            int prevLegNode = prevLegTrial.getClosestNode();
-                            Path prevLegPath = tryRoute(prevLegNode, altFromNode);
-                            if (prevLegPath == null || prevLegPath.getDistance() >
-                                    routingThreshold(prevLegTrial.getQueryPoint(), altLeg.fromSnap.getQueryPoint())) continue;
-                            if (prevLegNode == prevChainSnap.getClosestNode()) {
-                                // L1: replace last leg only (prevChainSnap -> altFromSnap)
-                                trimTail(segmentEdges, lastIterEdgeCount);
-                                segmentEdges.addAll(prevLegPath.calcEdges());
-                                edgesAtIterStart  = segmentEdges.size();
-                                previousLegToSnap = altLeg.fromSnap;
-                                chainNode         = altLeg.fromSnap.getClosestNode();
-                                leg               = altLeg;
-                                System.out.println("  [Seg " + segNum + " leg " + wpIdx
-                                        + "] prev-leg snap fix L1: " + prevLegNode + "->" + altFromNode
-                                        + " (" + String.format("%.0f", prevLegPath.getDistance()) + "m)");
-                                break;
-                            } else if (prevPrevChainSnap != null && prevPrevIterEdgeCount > 0) {
-                                // L2: replace last two legs (prevPrevChainSnap -> prevLegTrial -> altFromSnap)
-                                Path ppPath = tryRoute(prevPrevChainSnap.getClosestNode(), prevLegNode);
-                                if (ppPath == null || ppPath.getDistance() >
-                                        routingThreshold(prevPrevChainSnap.getQueryPoint(), prevLegTrial.getQueryPoint())) continue;
-                                trimTail(segmentEdges, lastIterEdgeCount + prevPrevIterEdgeCount);
-                                segmentEdges.addAll(ppPath.calcEdges());
-                                segmentEdges.addAll(prevLegPath.calcEdges());
-                                edgesAtIterStart  = segmentEdges.size();
-                                previousLegToSnap = altLeg.fromSnap;
-                                chainNode         = altLeg.fromSnap.getClosestNode();
-                                leg               = altLeg;
-                                System.out.println("  [Seg " + segNum + " leg " + wpIdx
-                                        + "] prev-leg snap fix L2: " + prevPrevChainSnap.getClosestNode()
-                                        + "->" + prevLegNode + "->" + altFromNode
-                                        + " (" + String.format("%.0f", ppPath.getDistance()) + "m + "
-                                        + String.format("%.0f", prevLegPath.getDistance()) + "m)");
-                                break;
-                            }
-                        }
-                    }
-                }
+            perSegmentRoutedEdges.add(result.edges);
+            segmentBoundaryNodes.add(new int[]{result.startNode, result.endNode});
+            logSegmentGeoJson(result.edges, segNum, waypoints.size(), result.spliceable, result.startNode, result.endNode);
 
-                // --- Fallback 3: Short-spur undo ---
-                // If the previous leg was very short (<= 500m) it likely landed on a dead-end spur.
-                // Roll it back and retry the current leg from the earlier chain node.
-                if (leg == null && lastLegRouteDist > 0 && lastLegRouteDist <= 500.0
-                        && lastIterEdgeCount > 0 && prevChainSnap != null
-                        && prevChainSnap.getClosestNode() != previousLegToSnap.getClosestNode()) {
-                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] short-spur undo: removing "
-                            + lastIterEdgeCount + " edges (last leg dist=" + String.format("%.0f", lastLegRouteDist)
-                            + "m), retrying from node " + prevChainSnap.getClosestNode());
-                    trimTail(segmentEdges, lastIterEdgeCount);
-                    previousLegToSnap     = prevChainSnap;
-                    prevChainSnap         = null;   // prevent double-undo
-                    prevPrevChainSnap     = null;
-                    lastIterEdgeCount     = 0;
-                    prevPrevIterEdgeCount = 0;
-                    lastLegRouteDist      = 0;
-                    continue;
-                }
-
-                // --- Fallback 4: Anchor back-step ---
-                // If the first leg (start anchor -> first off-path obs) still fails,
-                // step back to the previous on-path observation and retry from there.
-                if (leg == null && wpIdx == 0 && anchorBackSteps < MAX_ANCHOR_BACK_STEPS) {
-                    boolean anchorUpdated = false;
-                    for (int wb = fromFilteredPos - 1; wb >= 0; wb--) {
-                        if (offPathSet.contains(wb)) continue;
-                        if (!snapsPerObservationTmp.get(wb).isEmpty()) {
-                            System.out.println("  [Seg " + segNum + " leg 0] anchor back-step "
-                                    + (anchorBackSteps + 1) + ": obs "
-                                    + filteredObservations.get(fromFilteredPos).getPoint().index
-                                    + " -> obs " + filteredObservations.get(wb).getPoint().index);
-                            waypoints.set(0, wb);
-                            anchorBackSteps++;
-                            anchorUpdated = true;
-                            break;
-                        }
-                    }
-                    if (anchorUpdated) continue;
-                }
-
-                // All fallbacks exhausted
-                if (leg == null) {
-                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] no suitable path (obs "
-                            + filteredObservations.get(fromFilteredPos).getPoint().index
-                            + " -> " + filteredObservations.get(toFilteredPos).getPoint().index
-                            + "), threshold=" + String.format("%.0f", threshold) + "m");
-                    allSegmentsRouted = false;
-                    break;
-                }
-
-                // --- Commit leg ---
-                boolean usedChainedSnap = (chainNode >= 0 && leg.fromSnap.getClosestNode() == chainNode);
-                System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] obs "
-                        + filteredObservations.get(fromFilteredPos).getPoint().index
-                        + " -> " + filteredObservations.get(toFilteredPos).getPoint().index
-                        + ": from=" + leg.fromSnap.getClosestNode()
-                        + (usedChainedSnap ? "(chained)" : "(alt)") + " to=" + leg.toSnap.getClosestNode()
-                        + " dist=" + String.format("%.0f", leg.path.getDistance()) + "m");
-
-                if (wpIdx == 0)                    segmentStartNode = leg.fromSnap.getClosestNode();
-                if (wpIdx == waypoints.size() - 2) segmentEndNode   = leg.toSnap.getClosestNode();
-
-                routedPathSnaps.get(fromFilteredPos).add(leg.fromSnap);
-                routedPathSnaps.get(toFilteredPos).add(leg.toSnap);
-
-                // Insert intra-bridge if the chosen from-snap differs from the previous leg's end node
-                if (chainNode >= 0 && leg.fromSnap.getClosestNode() != chainNode) {
-                    Path bridge = tryRoute(chainNode, leg.fromSnap.getClosestNode());
-                    if (bridge != null && bridge.getDistance() <= MAX_BRIDGE_DISTANCE) {
-                        segmentEdges.addAll(bridge.calcEdges());
-                        System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge OK: "
-                                + chainNode + " -> " + leg.fromSnap.getClosestNode()
-                                + " dist=" + String.format("%.0f", bridge.getDistance()) + "m");
-                    } else {
-                        double bridgeDist = (bridge != null) ? bridge.getDistance() : -1;
-                        System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge FAIL: "
-                                + chainNode + " -> " + leg.fromSnap.getClosestNode()
-                                + " dist=" + String.format("%.0f", bridgeDist) + "m (limit=" + MAX_BRIDGE_DISTANCE + ")");
-                        segmentSpliceable = false;
-                    }
-                    if (!segmentSpliceable) break;
-                }
-
-                segmentEdges.addAll(leg.path.calcEdges());
-                prevPrevChainSnap     = prevChainSnap;
-                prevPrevIterEdgeCount = lastIterEdgeCount;
-                prevChainSnap         = previousLegToSnap;
-                previousLegToSnap     = leg.toSnap;
-                lastIterEdgeCount     = segmentEdges.size() - edgesAtIterStart;
-                lastLegRouteDist      = leg.path.getDistance();
-                wpIdx++;
-            }
-            
-            // Salvage partial segment: if the leg loop exited early but committed edges exist,
-            // find the last edge arrival in segmentEdges that is already in bestPathNodeSet.
-            // Trim the segment there so no walk-forward bridge is needed.
-            if (segmentSpliceable && !segmentEdges.isEmpty() && segmentEndNode == -1 && previousLegToSnap != null) {
-                int candidateEndNode = previousLegToSnap.getClosestNode();
-                if (bestPathNodeSet.contains(candidateEndNode)) {
-                    segmentEndNode = candidateEndNode;
-                } else {
-                    // Scan segment edges for the last arrival that is on the bestPath
-                    int prevNode = segmentEdges.get(0).getBaseNode();
-                    int foundNode = -1;
-                    int trimToEdge = -1;
-                    for (int e = 0; e < segmentEdges.size(); e++) {
-                        EdgeIteratorState edge = segmentEdges.get(e);
-                        int arrival = (edge.getBaseNode() == prevNode) ? edge.getAdjNode() : edge.getBaseNode();
-                        if (bestPathNodeSet.contains(arrival)) {
-                            foundNode = arrival;
-                            trimToEdge = e;
-                        }
-                        prevNode = arrival;
-                    }
-                    if (foundNode >= 0) {
-                        while (segmentEdges.size() > trimToEdge + 1) segmentEdges.remove(segmentEdges.size() - 1);
-                        segmentEndNode = foundNode;
-                        System.out.println("  Segment end trimmed: last bestPath node in segment=" + segmentEndNode + " (edge " + trimToEdge + ")");
-                    } else {
-                        // Fall back: seed from chain end and let walk-forward splice attempt
-                        segmentEndNode = candidateEndNode;
-                        // Diagnostics: log the last 5 arrival nodes to understand why none matched bestPathNodeSet
-                        StringBuilder dbg = new StringBuilder("  Segment end candidate=" + segmentEndNode + " (not in bestPath). Last 5 arrivals: ");
-                        int prevNode2 = segmentEdges.get(0).getBaseNode();
-                        List<Integer> arrivals = new ArrayList<>();
-                        for (EdgeIteratorState edge : segmentEdges) {
-                            int arr = (edge.getBaseNode() == prevNode2) ? edge.getAdjNode() : edge.getBaseNode();
-                            arrivals.add(arr);
-                            prevNode2 = arr;
-                        }
-                        for (int i = Math.max(0, arrivals.size() - 5); i < arrivals.size(); i++) {
-                            dbg.append(arrivals.get(i)).append("(bp=").append(bestPathNodeSet.contains(arrivals.get(i))).append(") ");
-                        }
-                        System.out.println(dbg);
-                    }
-                }
-            }
-
-            // If segment has internal gaps (e.g. failed intra-bridge), mark unspliceable
-            if (!segmentSpliceable) {
-                segmentStartNode = -1;
-                segmentEndNode = -1;
-            }
-            
-            // Walk-back splice for start and end nodes if segment is still spliceable
-            if (segmentSpliceable) {
-                List<Integer> segWaypoints = segmentWaypointIndices.get(segNum);
-                
-                // Start anchor walk-back
-                if (segmentStartNode >= 0 && !bestPathNodeSet.contains(segmentStartNode)) {
-                    int anchorFiltPos = segWaypoints.get(0);
-                    boolean spliceFound = false;
-                    for (int wb = anchorFiltPos; wb >= 0 && !spliceFound; wb--) {
-                            if (offPathSet.contains(wb)) continue;
-                            List<Snap> bpSnaps = bestPathSnaps.get(wb);
-                            if (bpSnaps.isEmpty()) continue;
-                            for (Snap bpSnap : bpSnaps) {
-                                int spliceNode = bpSnap.getClosestNode();
-                                if (!bestPathNodeSet.contains(spliceNode)) continue;
-                                try {
-                                    List<Path> bridge = router.calcPaths(queryGraph, spliceNode, EdgeIterator.ANY_EDGE,
-                                            new int[]{segmentStartNode}, new int[]{EdgeIterator.ANY_EDGE});
-                                    if (!bridge.isEmpty() && bridge.get(0).isFound()
-                                            && bridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
-                                        List<EdgeIteratorState> bridgeEdges = bridge.get(0).calcEdges();
-                                        segmentEdges.addAll(0, bridgeEdges);
-                                        System.out.println("  Walk-back splice (start): obs " +
-                                                filteredObservations.get(wb).getPoint().index +
-                                                " -> segment start, bridge=" + bridgeEdges.size() +
-                                                " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m");
-                                        segmentStartNode = spliceNode;
-                                        spliceFound = true;
-                                        break;
-                                    }
-                                } catch (Exception e) { /* skip */ }
-                            }
-                    }
-                    if (!spliceFound) {
-                        System.out.println("  WARNING: could not find walk-back splice for start of segment " + segNum);
-                        segmentStartNode = -1;
-                    }
-                }
-
-                // End anchor walk-forward
-                if (segmentEndNode >= 0 && !bestPathNodeSet.contains(segmentEndNode)) {
-                    int anchorFiltPos = segWaypoints.get(segWaypoints.size() - 1);
-                    boolean spliceFound = false;
-                    for (int wf = anchorFiltPos; wf < filteredObservations.size() && !spliceFound; wf++) {
-                            if (offPathSet.contains(wf)) continue;
-                            List<Snap> bpSnaps = bestPathSnaps.get(wf);
-                            if (bpSnaps.isEmpty()) continue;
-                            for (Snap bpSnap : bpSnaps) {
-                                int spliceNode = bpSnap.getClosestNode();
-                                if (!bestPathNodeSet.contains(spliceNode)) continue;
-                                try {
-                                    List<Path> bridge = router.calcPaths(queryGraph, segmentEndNode, EdgeIterator.ANY_EDGE,
-                                            new int[]{spliceNode}, new int[]{EdgeIterator.ANY_EDGE});
-                                    if (!bridge.isEmpty() && bridge.get(0).isFound()
-                                            && bridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
-                                        List<EdgeIteratorState> bridgeEdges = bridge.get(0).calcEdges();
-                                        segmentEdges.addAll(bridgeEdges);
-                                        System.out.println("  Walk-forward splice (end): segment end -> obs " +
-                                                filteredObservations.get(wf).getPoint().index +
-                                                ", bridge=" + bridgeEdges.size() +
-                                                " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m");
-                                        segmentEndNode = spliceNode;
-                                        spliceFound = true;
-                                        break;
-                                    }
-                                } catch (Exception e) { /* skip */ }
-                            }
-                    }
-                    if (!spliceFound) {
-                        System.out.println("  WARNING: could not find walk-forward splice for end of segment " + segNum);
-                        segmentEndNode = -1;
-                    }
-                }
-            }
-            
-            perSegmentRoutedEdges.add(segmentEdges);
-            segmentBoundaryNodes.add(new int[]{segmentStartNode, segmentEndNode});
-            
-            // Print routed segment as GeoJSON for debugging
-            if (!segmentEdges.isEmpty()) {
-                StringBuilder segmentGeoJson = new StringBuilder();
-                segmentGeoJson.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
-                boolean first = true;
-                for (EdgeIteratorState edge : segmentEdges) {
-                    PointList edgePoints = edge.fetchWayGeometry(FetchMode.ALL);
-                    for (int i = 0; i < edgePoints.size(); i++) {
-                        if (!first) segmentGeoJson.append(",");
-                        segmentGeoJson.append("[").append(edgePoints.getLon(i)).append(",").append(edgePoints.getLat(i)).append("]");
-                        first = false;
-                    }
-                }
-                double segmentDistance = 0;
-                for (EdgeIteratorState edge : segmentEdges) {
-                    segmentDistance += edge.getDistance();
-                }
-                segmentGeoJson.append("]},\"properties\":{\"stroke\":\"#ff9900\",\"path_type\":\"via_waypoint_segment\",\"segment_index\":")
-                        .append(segNum)
-                        .append(",\"edges\":")
-                        .append(segmentEdges.size())
-                        .append(",\"distance\":")
-                        .append(segmentDistance)
-                        .append(",\"waypoints\":")
-                        .append(waypoints.size())
-                        .append(",\"spliceable\":")
-                        .append(segmentSpliceable)
-                        .append(",\"start_node\":")
-                        .append(segmentStartNode)
-                        .append(",\"end_node\":")
-                        .append(segmentEndNode)
-                        .append("}}");
-                System.out.println("Via-waypoint Segment #" + segNum + " GeoJSON: " + segmentGeoJson);
-            }
-
-            if (!allSegmentsRouted) break;
+            if (!result.allLegsRouted) { allSegmentsRouted = false; break; }
         }
-        
-        if (!allSegmentsRouted || perSegmentRoutedEdges.isEmpty()) {
+
+        if (!allSegmentsRouted || perSegmentRoutedEdges.isEmpty())
             return new ViaWaypointRoutingResult(false, null, null, null);
-        }
-        
+
         return new ViaWaypointRoutingResult(true, perSegmentRoutedEdges, segmentBoundaryNodes, routedPathSnaps);
     }
 
@@ -1533,5 +1150,459 @@ public class RailwayMapMatching extends MapMatching {
             offPathSegments.add(currentSegment);
         }
         return offPathSegments;
+    }
+
+    /**
+     * Validates that every waypoint across all segments has at least one snap candidate.
+     * Also logs snap details for each unique waypoint position.
+     *
+     * @return {@code true} if all waypoints have snaps; {@code false} if any is missing (routing cannot proceed)
+     */
+    private static boolean validateAndLogWaypointSnaps(
+            List<List<Integer>> segmentWaypointIndices,
+            List<List<Snap>> snapsPerObservationTmp,
+            List<Observation> filteredObservations,
+            Set<Integer> offPathSet) {
+        Set<Integer> logged = new HashSet<>();
+        for (List<Integer> waypoints : segmentWaypointIndices) {
+            for (int filteredPos : waypoints) {
+                if (!logged.add(filteredPos)) continue;
+                List<Snap> candidateSnaps = snapsPerObservationTmp.get(filteredPos);
+                if (candidateSnaps == null || candidateSnaps.isEmpty()) {
+                    System.out.println("Via-waypoint routing: some waypoints have no snaps");
+                    return false;
+                }
+                Observation obs = filteredObservations.get(filteredPos);
+                Snap closestSnap = candidateSnaps.get(0);
+                boolean isOffPath = offPathSet.contains(filteredPos);
+                System.out.println("  Obs " + obs.getPoint().index + (isOffPath ? " [OFF-PATH]" : " [ON-PATH anchor]") +
+                        ": GPS=" + obs.getPoint().lat + "," + obs.getPoint().lon +
+                        " -> snapped to node " + closestSnap.getClosestNode() +
+                        " at " + closestSnap.getSnappedPoint().lat + "," + closestSnap.getSnappedPoint().lon +
+                        " on edge " + closestSnap.getClosestEdge().getEdge() +
+                        " (name=" + closestSnap.getClosestEdge().getName() + ")" +
+                        " dist=" + String.format("%.1f", closestSnap.getQueryDistance()) + "m" +
+                        " (" + candidateSnaps.size() + " candidates)");
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Extracts the set of all graph nodes visited by the given best path.
+     */
+    private static Set<Integer> buildBestPathNodeSet(Path bestPath) {
+        List<EdgeIteratorState> edges = bestPath.calcEdges();
+        Set<Integer> nodeSet = new HashSet<>();
+        if (edges.isEmpty()) return nodeSet;
+        int prev = edges.get(0).getBaseNode();
+        nodeSet.add(prev);
+        for (EdgeIteratorState e : edges) {
+            int next = (e.getBaseNode() == prev) ? e.getAdjNode() : e.getBaseNode();
+            nodeSet.add(next);
+            prev = next;
+        }
+        return nodeSet;
+    }
+
+    /**
+     * Routes all waypoint-to-waypoint legs for a single off-path segment.
+     * Applies four fallbacks in order: waypoint-skip, prev-leg snap fix (L1/L2),
+     * short-spur undo, and anchor back-step. Updates {@code routedPathSnaps} in place.
+     *
+     * @return a {@link SegmentResult} with the committed edges and boundary nodes
+     */
+    private SegmentResult routeSegmentLegs(
+            List<Integer> waypoints,
+            List<List<Snap>> snapsPerObservationTmp,
+            List<Observation> filteredObservations,
+            Set<Integer> offPathSet,
+            List<List<Snap>> routedPathSnaps,
+            int segNum,
+            StopWatch sw) {
+
+        SegmentResult result = new SegmentResult();
+        Snap previousLegToSnap = null;
+        Snap prevChainSnap         = null;
+        Snap prevPrevChainSnap     = null;
+        int  lastIterEdgeCount     = 0;
+        int  prevPrevIterEdgeCount = 0;
+        double lastLegRouteDist    = 0;
+        int  anchorBackSteps       = 0;
+        int  wpIdx                 = 0;
+
+        while (wpIdx < waypoints.size() - 1) {
+            checkTimeLimit(sw);
+
+            int edgesAtIterStart = result.edges.size();
+            int fromFilteredPos  = waypoints.get(wpIdx);
+            int toFilteredPos    = waypoints.get(wpIdx + 1);
+
+            List<Snap> allFromCandidates = limit(snapsPerObservationTmp.get(fromFilteredPos), MAX_SNAP_CANDIDATES);
+            List<Snap> toCandidates      = limit(snapsPerObservationTmp.get(toFilteredPos),   MAX_SNAP_CANDIDATES);
+            List<Snap> fromCandidates    = buildChainedFromCandidates(allFromCandidates, previousLegToSnap);
+            double threshold             = routingThreshold(fromCandidates.get(0).getQueryPoint(),
+                                                            toCandidates.get(0).getQueryPoint());
+            int chainNode                = (previousLegToSnap != null) ? previousLegToSnap.getClosestNode() : -1;
+
+            // --- Primary routing: best (from, to) snap pair within threshold.
+            // Non-chained from-snaps are bridge-pre-filtered to prevent infeasible intra-bridges. ---
+            LegResult leg = findBestLeg(fromCandidates, toCandidates, chainNode, threshold);
+
+            // --- Fallback 1: Waypoint-skip ---
+            // Route the chain directly to waypoints[wpIdx+2], bypassing the unreachable waypoints[wpIdx+1].
+            if (leg == null && previousLegToSnap != null && wpIdx < waypoints.size() - 2) {
+                int skipToFilteredPos     = waypoints.get(wpIdx + 2);
+                List<Snap> skipCandidates = limit(snapsPerObservationTmp.get(skipToFilteredPos), MAX_SNAP_CANDIDATES);
+                if (!skipCandidates.isEmpty()) {
+                    double skipThreshold = routingThreshold(
+                            previousLegToSnap.getQueryPoint(), skipCandidates.get(0).getQueryPoint());
+                    for (Snap toSnap : skipCandidates) {
+                        Path p = tryRoute(previousLegToSnap.getClosestNode(), toSnap.getClosestNode());
+                        if (p != null && p.getDistance() <= skipThreshold) {
+                            System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] waypoint-skip obs "
+                                    + filteredObservations.get(toFilteredPos).getPoint().index
+                                    + " -> routing chain to obs "
+                                    + filteredObservations.get(skipToFilteredPos).getPoint().index);
+                            leg           = new LegResult(p, previousLegToSnap, toSnap);
+                            wpIdx++;
+                            toFilteredPos = skipToFilteredPos;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // --- Fallback 2: Prev-leg snap fix (L1 / L2) ---
+            // The bridge pre-filter may have locked all from-snaps to a dead-end node.
+            // Scan ALL from-snap candidates (ignoring the pre-filter) for one that reaches the next obs.
+            // If found (altLeg), re-route the last 1 leg (L1) or 2 legs (L2) to reach that better from-snap.
+            if (leg == null && prevChainSnap != null && lastIterEdgeCount > 0) {
+                LegResult altLeg = null;
+                outer:
+                for (Snap cand : snapsPerObservationTmp.get(fromFilteredPos)) {
+                    if (cand.getClosestNode() == previousLegToSnap.getClosestNode()) continue;
+                    for (Snap toSnap : toCandidates) {
+                        Path p = tryRoute(cand.getClosestNode(), toSnap.getClosestNode());
+                        if (p != null && p.getDistance() <= threshold) {
+                            altLeg = new LegResult(p, cand, toSnap);
+                            break outer;
+                        }
+                    }
+                }
+                if (altLeg != null) {
+                    int altFromNode = altLeg.fromSnap.getClosestNode();
+                    List<Snap> prevLegFromTrials = new ArrayList<>();
+                    prevLegFromTrials.add(prevChainSnap);
+                    List<Snap> prevLegAllCands = snapsPerObservationTmp.get(waypoints.get(wpIdx - 1));
+                    if (prevLegAllCands != null)
+                        for (Snap s : prevLegAllCands)
+                            if (s.getClosestNode() != prevChainSnap.getClosestNode())
+                                prevLegFromTrials.add(s);
+                    for (Snap prevLegTrial : prevLegFromTrials) {
+                        int prevLegNode = prevLegTrial.getClosestNode();
+                        Path prevLegPath = tryRoute(prevLegNode, altFromNode);
+                        if (prevLegPath == null || prevLegPath.getDistance() >
+                                routingThreshold(prevLegTrial.getQueryPoint(), altLeg.fromSnap.getQueryPoint())) continue;
+                        if (prevLegNode == prevChainSnap.getClosestNode()) {
+                            // L1: replace last leg only
+                            trimTail(result.edges, lastIterEdgeCount);
+                            result.edges.addAll(prevLegPath.calcEdges());
+                            edgesAtIterStart  = result.edges.size();
+                            previousLegToSnap = altLeg.fromSnap;
+                            chainNode         = altLeg.fromSnap.getClosestNode();
+                            leg               = altLeg;
+                            System.out.println("  [Seg " + segNum + " leg " + wpIdx
+                                    + "] prev-leg snap fix L1: " + prevLegNode + "->" + altFromNode
+                                    + " (" + String.format("%.0f", prevLegPath.getDistance()) + "m)");
+                            break;
+                        } else if (prevPrevChainSnap != null && prevPrevIterEdgeCount > 0) {
+                            // L2: replace last two legs
+                            Path ppPath = tryRoute(prevPrevChainSnap.getClosestNode(), prevLegNode);
+                            if (ppPath == null || ppPath.getDistance() >
+                                    routingThreshold(prevPrevChainSnap.getQueryPoint(), prevLegTrial.getQueryPoint())) continue;
+                            trimTail(result.edges, lastIterEdgeCount + prevPrevIterEdgeCount);
+                            result.edges.addAll(ppPath.calcEdges());
+                            result.edges.addAll(prevLegPath.calcEdges());
+                            edgesAtIterStart  = result.edges.size();
+                            previousLegToSnap = altLeg.fromSnap;
+                            chainNode         = altLeg.fromSnap.getClosestNode();
+                            leg               = altLeg;
+                            System.out.println("  [Seg " + segNum + " leg " + wpIdx
+                                    + "] prev-leg snap fix L2: " + prevPrevChainSnap.getClosestNode()
+                                    + "->" + prevLegNode + "->" + altFromNode
+                                    + " (" + String.format("%.0f", ppPath.getDistance()) + "m + "
+                                    + String.format("%.0f", prevLegPath.getDistance()) + "m)");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // --- Fallback 3: Short-spur undo ---
+            // If the previous leg was very short (<= 500m) it likely landed on a dead-end spur.
+            // Roll it back and retry the current leg from the earlier chain node.
+            if (leg == null && lastLegRouteDist > 0 && lastLegRouteDist <= 500.0
+                    && lastIterEdgeCount > 0 && prevChainSnap != null
+                    && prevChainSnap.getClosestNode() != previousLegToSnap.getClosestNode()) {
+                System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] short-spur undo: removing "
+                        + lastIterEdgeCount + " edges (last leg dist=" + String.format("%.0f", lastLegRouteDist)
+                        + "m), retrying from node " + prevChainSnap.getClosestNode());
+                trimTail(result.edges, lastIterEdgeCount);
+                previousLegToSnap     = prevChainSnap;
+                prevChainSnap         = null;
+                prevPrevChainSnap     = null;
+                lastIterEdgeCount     = 0;
+                prevPrevIterEdgeCount = 0;
+                lastLegRouteDist      = 0;
+                continue;
+            }
+
+            // --- Fallback 4: Anchor back-step ---
+            // If the first leg still fails, step back to the previous on-path observation and retry.
+            if (leg == null && wpIdx == 0 && anchorBackSteps < MAX_ANCHOR_BACK_STEPS) {
+                boolean anchorUpdated = false;
+                for (int wb = fromFilteredPos - 1; wb >= 0; wb--) {
+                    if (offPathSet.contains(wb)) continue;
+                    if (!snapsPerObservationTmp.get(wb).isEmpty()) {
+                        System.out.println("  [Seg " + segNum + " leg 0] anchor back-step "
+                                + (anchorBackSteps + 1) + ": obs "
+                                + filteredObservations.get(fromFilteredPos).getPoint().index
+                                + " -> obs " + filteredObservations.get(wb).getPoint().index);
+                        waypoints.set(0, wb);
+                        anchorBackSteps++;
+                        anchorUpdated = true;
+                        break;
+                    }
+                }
+                if (anchorUpdated) continue;
+            }
+
+            // All fallbacks exhausted
+            if (leg == null) {
+                System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] no suitable path (obs "
+                        + filteredObservations.get(fromFilteredPos).getPoint().index
+                        + " -> " + filteredObservations.get(toFilteredPos).getPoint().index
+                        + "), threshold=" + String.format("%.0f", threshold) + "m");
+                result.allLegsRouted = false;
+                break;
+            }
+
+            // --- Commit leg ---
+            boolean usedChainedSnap = (chainNode >= 0 && leg.fromSnap.getClosestNode() == chainNode);
+            System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] obs "
+                    + filteredObservations.get(fromFilteredPos).getPoint().index
+                    + " -> " + filteredObservations.get(toFilteredPos).getPoint().index
+                    + ": from=" + leg.fromSnap.getClosestNode()
+                    + (usedChainedSnap ? "(chained)" : "(alt)") + " to=" + leg.toSnap.getClosestNode()
+                    + " dist=" + String.format("%.0f", leg.path.getDistance()) + "m");
+
+            if (wpIdx == 0)                    result.startNode = leg.fromSnap.getClosestNode();
+            if (wpIdx == waypoints.size() - 2) result.endNode   = leg.toSnap.getClosestNode();
+
+            routedPathSnaps.get(fromFilteredPos).add(leg.fromSnap);
+            routedPathSnaps.get(toFilteredPos).add(leg.toSnap);
+
+            // Insert intra-bridge if the chosen from-snap differs from the previous leg's end node
+            if (chainNode >= 0 && leg.fromSnap.getClosestNode() != chainNode) {
+                Path bridge = tryRoute(chainNode, leg.fromSnap.getClosestNode());
+                if (bridge != null && bridge.getDistance() <= MAX_BRIDGE_DISTANCE) {
+                    result.edges.addAll(bridge.calcEdges());
+                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge OK: "
+                            + chainNode + " -> " + leg.fromSnap.getClosestNode()
+                            + " dist=" + String.format("%.0f", bridge.getDistance()) + "m");
+                } else {
+                    double bridgeDist = (bridge != null) ? bridge.getDistance() : -1;
+                    System.out.println("  [Seg " + segNum + " leg " + wpIdx + "] intra-bridge FAIL: "
+                            + chainNode + " -> " + leg.fromSnap.getClosestNode()
+                            + " dist=" + String.format("%.0f", bridgeDist) + "m (limit=" + MAX_BRIDGE_DISTANCE + ")");
+                    result.spliceable = false;
+                }
+                if (!result.spliceable) break;
+            }
+
+            result.edges.addAll(leg.path.calcEdges());
+            prevPrevChainSnap     = prevChainSnap;
+            prevPrevIterEdgeCount = lastIterEdgeCount;
+            prevChainSnap         = previousLegToSnap;
+            previousLegToSnap     = leg.toSnap;
+            lastIterEdgeCount     = result.edges.size() - edgesAtIterStart;
+            lastLegRouteDist      = leg.path.getDistance();
+            result.lastToSnap     = leg.toSnap;
+            wpIdx++;
+        }
+
+        return result;
+    }
+
+    /**
+     * Attempts to recover a valid segment end node when the leg loop exits before reaching
+     * the final waypoint. Scans the committed edges for the last node that is also on the
+     * best path, trims the segment there, and sets {@code result.endNode}.
+     */
+    private static void salvagePartialSegment(SegmentResult result, Set<Integer> bestPathNodeSet) {
+        if (!result.spliceable || result.edges.isEmpty()
+                || result.endNode >= 0 || result.lastToSnap == null) return;
+
+        int candidateEndNode = result.lastToSnap.getClosestNode();
+        if (bestPathNodeSet.contains(candidateEndNode)) {
+            result.endNode = candidateEndNode;
+            return;
+        }
+
+        // Scan for the last edge arrival that lands on the best path
+        int prevNode   = result.edges.get(0).getBaseNode();
+        int foundNode  = -1;
+        int trimToEdge = -1;
+        for (int e = 0; e < result.edges.size(); e++) {
+            EdgeIteratorState edge = result.edges.get(e);
+            int arrival = (edge.getBaseNode() == prevNode) ? edge.getAdjNode() : edge.getBaseNode();
+            if (bestPathNodeSet.contains(arrival)) {
+                foundNode  = arrival;
+                trimToEdge = e;
+            }
+            prevNode = arrival;
+        }
+
+        if (foundNode >= 0) {
+            while (result.edges.size() > trimToEdge + 1) result.edges.remove(result.edges.size() - 1);
+            result.endNode = foundNode;
+            System.out.println("  Segment end trimmed: last bestPath node in segment=" + result.endNode + " (edge " + trimToEdge + ")");
+        } else {
+            // Use chain end as a hint for the walk-forward splice to bridge from
+            result.endNode = candidateEndNode;
+            StringBuilder dbg = new StringBuilder("  Segment end candidate=" + result.endNode + " (not in bestPath). Last 5 arrivals: ");
+            int prevNode2 = result.edges.get(0).getBaseNode();
+            List<Integer> arrivals = new ArrayList<>();
+            for (EdgeIteratorState edge : result.edges) {
+                int arr = (edge.getBaseNode() == prevNode2) ? edge.getAdjNode() : edge.getBaseNode();
+                arrivals.add(arr);
+                prevNode2 = arr;
+            }
+            for (int i = Math.max(0, arrivals.size() - 5); i < arrivals.size(); i++)
+                dbg.append(arrivals.get(i)).append("(bp=").append(bestPathNodeSet.contains(arrivals.get(i))).append(") ");
+            System.out.println(dbg);
+        }
+    }
+
+    /**
+     * Bridges the segment's start and end nodes back onto the best path using
+     * a walk-back (for start) and walk-forward (for end) scan over on-path snaps.
+     * Updates {@code result.startNode} and {@code result.endNode} in place.
+     * Sets them to -1 if no suitable bridge is found.
+     */
+    private void spliceSegmentBoundaries(
+            SegmentResult result,
+            List<Integer> waypoints,
+            Set<Integer> bestPathNodeSet,
+            List<List<Snap>> bestPathSnaps,
+            List<Observation> filteredObservations,
+            Set<Integer> offPathSet,
+            int segNum) {
+
+        // Start anchor walk-back
+        if (result.startNode >= 0 && !bestPathNodeSet.contains(result.startNode)) {
+            int anchorFiltPos = waypoints.get(0);
+            boolean spliceFound = false;
+            for (int wb = anchorFiltPos; wb >= 0 && !spliceFound; wb--) {
+                if (offPathSet.contains(wb)) continue;
+                List<Snap> bpSnaps = bestPathSnaps.get(wb);
+                if (bpSnaps.isEmpty()) continue;
+                for (Snap bpSnap : bpSnaps) {
+                    int spliceNode = bpSnap.getClosestNode();
+                    if (!bestPathNodeSet.contains(spliceNode)) continue;
+                    try {
+                        List<Path> bridge = router.calcPaths(queryGraph, spliceNode, EdgeIterator.ANY_EDGE,
+                                new int[]{result.startNode}, new int[]{EdgeIterator.ANY_EDGE});
+                        if (!bridge.isEmpty() && bridge.get(0).isFound()
+                                && bridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
+                            List<EdgeIteratorState> bridgeEdges = bridge.get(0).calcEdges();
+                            result.edges.addAll(0, bridgeEdges);
+                            System.out.println("  Walk-back splice (start): obs " +
+                                    filteredObservations.get(wb).getPoint().index +
+                                    " -> segment start, bridge=" + bridgeEdges.size() +
+                                    " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m");
+                            result.startNode = spliceNode;
+                            spliceFound = true;
+                            break;
+                        }
+                    } catch (Exception e) { /* skip */ }
+                }
+            }
+            if (!spliceFound) {
+                System.out.println("  WARNING: could not find walk-back splice for start of segment " + segNum);
+                result.startNode = -1;
+            }
+        }
+
+        // End anchor walk-forward
+        if (result.endNode >= 0 && !bestPathNodeSet.contains(result.endNode)) {
+            int anchorFiltPos = waypoints.get(waypoints.size() - 1);
+            boolean spliceFound = false;
+            for (int wf = anchorFiltPos; wf < filteredObservations.size() && !spliceFound; wf++) {
+                if (offPathSet.contains(wf)) continue;
+                List<Snap> bpSnaps = bestPathSnaps.get(wf);
+                if (bpSnaps.isEmpty()) continue;
+                for (Snap bpSnap : bpSnaps) {
+                    int spliceNode = bpSnap.getClosestNode();
+                    if (!bestPathNodeSet.contains(spliceNode)) continue;
+                    try {
+                        List<Path> bridge = router.calcPaths(queryGraph, result.endNode, EdgeIterator.ANY_EDGE,
+                                new int[]{spliceNode}, new int[]{EdgeIterator.ANY_EDGE});
+                        if (!bridge.isEmpty() && bridge.get(0).isFound()
+                                && bridge.get(0).getDistance() <= MAX_BRIDGE_DISTANCE) {
+                            List<EdgeIteratorState> bridgeEdges = bridge.get(0).calcEdges();
+                            result.edges.addAll(bridgeEdges);
+                            System.out.println("  Walk-forward splice (end): segment end -> obs " +
+                                    filteredObservations.get(wf).getPoint().index +
+                                    ", bridge=" + bridgeEdges.size() +
+                                    " edges, " + String.format("%.0f", bridge.get(0).getDistance()) + "m");
+                            result.endNode = spliceNode;
+                            spliceFound = true;
+                            break;
+                        }
+                    } catch (Exception e) { /* skip */ }
+                }
+            }
+            if (!spliceFound) {
+                System.out.println("  WARNING: could not find walk-forward splice for end of segment " + segNum);
+                result.endNode = -1;
+            }
+        }
+    }
+
+    /**
+     * Prints a GeoJSON Feature representing the routed segment for external debug visualisation.
+     */
+    private static void logSegmentGeoJson(
+            List<EdgeIteratorState> edges,
+            int segNum,
+            int waypointCount,
+            boolean spliceable,
+            int startNode,
+            int endNode) {
+        if (edges.isEmpty()) return;
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[");
+        boolean first = true;
+        for (EdgeIteratorState edge : edges) {
+            PointList pts = edge.fetchWayGeometry(FetchMode.ALL);
+            for (int i = 0; i < pts.size(); i++) {
+                if (!first) sb.append(",");
+                sb.append("[").append(pts.getLon(i)).append(",").append(pts.getLat(i)).append("]");
+                first = false;
+            }
+        }
+        double distance = edges.stream().mapToDouble(EdgeIteratorState::getDistance).sum();
+        sb.append("]},\"properties\":{\"stroke\":\"#ff9900\",\"path_type\":\"via_waypoint_segment\",\"segment_index\":")
+                .append(segNum)
+                .append(",\"edges\":").append(edges.size())
+                .append(",\"distance\":").append(distance)
+                .append(",\"waypoints\":").append(waypointCount)
+                .append(",\"spliceable\":").append(spliceable)
+                .append(",\"start_node\":").append(startNode)
+                .append(",\"end_node\":").append(endNode)
+                .append("}}");
+        System.out.println("Via-waypoint Segment #" + segNum + " GeoJSON: " + sb);
     }
 }

@@ -303,3 +303,53 @@ Both are maintained on every leg commit and cleared on short-spur undo.
 
 ### Result
 **L2 triggered**: `17428963 → 25079 → 17429082` (143 m + 949 m), allowing obs 30→31→32 to route cleanly. Segment `end_node = 17427648` (valid bestPath splice node); full off-path segment covers 41.6 km across 72 edges. `testGPXDataParisCannes` passes.
+
+## Code Refactoring (April 15, 2026)
+
+### Waypoints as Filtered Positions
+- **Problem**: `buildWaypointsList` stored original observation indices (`getPoint().index`) in the waypoints list, requiring a reverse map (`originalToFilteredPos`) and a snap cache (`waypointAllSnapsMap`) to translate back to filtered positions at every use site.
+- **Solution**: Changed waypoints to store **filtered positions** (indices into `filteredObservations`) directly. Since `snapsPerObservationTmp` is already indexed by filtered position, all snap lookups become `snapsPerObservationTmp.get(filteredPos)` — a direct O(1) access.
+- **Removed**:
+  - `originalToFilteredPos` `HashMap` (was built and used in 6 call sites)
+  - `waypointAllSnapsMap` `LinkedHashMap` (was built with linear scans; also handled lazy-loading for the anchor back-step)
+  - `findSnapsForObs` helper (only existed to serve the lazy-loading above)
+- **Logging**: Original indices for human-readable output are still derived on-demand via `filteredObservations.get(filteredPos).getPoint().index`.
+- **`buildWaypointsList` simplification**: Pre-scan loops for anchor-before/after were merged with the waypoint-building loops, cutting the method from 5 loops to 2.
+
+### `performViaWaypointRouting` Decomposition
+Decomposed the ~450-line monolithic `performViaWaypointRouting` method into a 55-line thin orchestrator plus 6 focused helpers.
+
+#### New inner class: `SegmentResult`
+Holds the mutable per-segment routing state (`edges`, `startNode`, `endNode`, `spliceable`, `allLegsRouted`, `lastToSnap`) that is updated in place by salvage and splice steps.
+
+#### Extracted methods
+
+| Method | Single responsibility |
+|---|---|
+| `validateAndLogWaypointSnaps` | Fail-fast snap validation + debug logging for all waypoints |
+| `buildBestPathNodeSet` | Extract the set of all nodes visited by the best path |
+| `routeSegmentLegs` | Leg-chaining while loop with 4 ordered fallbacks |
+| `salvagePartialSegment` | Trim a partial segment to the last best-path node after an early exit |
+| `spliceSegmentBoundaries` | Walk-back (start) and walk-forward (end) bridge onto best path |
+| `logSegmentGeoJson` | Build and print the GeoJSON Feature for external debug visualisation |
+
+#### Resulting orchestrator flow
+```
+computeOffPathSegments → buildWaypointsList
+validateAndLogWaypointSnaps   // fail-fast if any waypoint has no snaps
+buildBestPathNodeSet
+for each segment:
+  routeSegmentLegs → SegmentResult
+  if !spliceable: clear boundary nodes
+  salvagePartialSegment
+  spliceSegmentBoundaries
+  record edges + boundary nodes
+  logSegmentGeoJson
+  if !allLegsRouted: break
+return ViaWaypointRoutingResult
+```
+
+#### Metrics
+- **Before**: ~450 lines in one method
+- **After**: 55-line orchestrator + 6 helpers (each 20–90 lines)
+- No functional changes; `testGPXDataParisCannes` passes.
