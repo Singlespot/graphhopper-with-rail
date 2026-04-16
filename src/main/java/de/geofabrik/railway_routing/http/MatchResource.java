@@ -63,6 +63,10 @@ public class MatchResource {
     private final ProfileResolver profileResolver;
     private final TranslationMap trMap;
     private final String osmDate;
+    /** Maximum number of routing alternatives considered per observation. */
+    private static final int MAX_ROUTING_ALTERNATIVES = 6;
+    /** Maximum share of the total distance of the best path that a routing alternative can have. */
+    private static final double MAX_SHARE_FACTOR = 0.9;
 
     // Class that will hold list of Snap objects and will be instantiated with a List of Snap objects, adding only
     // Snap objects that either have a unique snap.getClosestEdge().getValue("street_name") or snap.getClosestEdge().getValue("street_ref")
@@ -486,8 +490,8 @@ public class MatchResource {
                 if (true) {
                     routing_request.setAlgorithm(Parameters.Algorithms.ALT_ROUTE).
                             getHints().
-                            putObject("alternative_route.max_paths", 8).
-                            putObject("alternative_route.max_share_factor", 1);
+                            putObject("alternative_route.max_paths", MAX_ROUTING_ALTERNATIVES).
+                            putObject("alternative_route.max_share_factor", MAX_SHARE_FACTOR);
                 }
                 System.out.println("Routing between " + start_gh_point + " and " + end_gh_point + " on unified QueryGraph");
                 // Route on the unified QueryGraph using observation snaps for first/last points
