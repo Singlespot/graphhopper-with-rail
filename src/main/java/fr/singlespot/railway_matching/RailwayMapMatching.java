@@ -860,7 +860,20 @@ public class RailwayMapMatching extends MapMatching {
                 routingResult.segmentBoundaryNodes);
         
         System.out.println("Via-waypoint routing: successfully routed detour segments. Total merged edges=" + mergedPath.size());
-        
+
+        // Fail-early: ensure merged path distance respects the max allowed distance
+        // (same constraint used for the direct path in Case 1). Otherwise fall back to Viterbi.
+        double mergedDistance = 0.0;
+        for (EdgeIteratorState e : mergedPath) mergedDistance += e.getDistance();
+        double maxAllowedDistance = calculateMaxAllowedDistance(filteredObservations);
+        if (mergedDistance > maxAllowedDistance) {
+            System.out.println("Via-waypoint routing: merged path distance " +
+                    String.format("%.0f", mergedDistance) + "m exceeds threshold " +
+                    String.format("%.0f", maxAllowedDistance) + "m - falling back to Viterbi");
+            statistics.put("usedViaWaypointRouting", false);
+            return null;
+        }
+
         // Debug: Check merged path edges before creating MapMatchedPath
         for (int i = 0; i < Math.min(5, mergedPath.size()); i++) {
             EdgeIteratorState edge = mergedPath.get(i);
