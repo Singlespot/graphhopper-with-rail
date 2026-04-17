@@ -1,11 +1,9 @@
 package fr.singlespot.railway_matching;
 
-import com.graphhopper.routing.Path;
-import com.graphhopper.routing.querygraph.QueryGraph;
-import com.graphhopper.storage.BaseGraph;
-import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.matching.Observation;
+import com.graphhopper.routing.Path;
 import com.graphhopper.storage.index.Snap;
+import com.graphhopper.util.EdgeIteratorState;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -76,6 +74,9 @@ public class SnappedPointsAnalyzer {
                                 snapsPerObservationOnRoutedPathTmp.add(Collections.singletonList(snap));
                                 maxEdgeIndex = edgeIndex;
                                 pathEdgeIndices.add(edgeIndex);
+                            }
+                            else{
+                                snapsPerObservationOnRoutedPathTmp.add(Collections.emptyList());
                             }
                             oneOfSnapsOnRoutedPath = true;
                             snapsOnPathCount++;

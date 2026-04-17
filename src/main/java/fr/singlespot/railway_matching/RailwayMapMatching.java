@@ -117,7 +117,7 @@ public class RailwayMapMatching extends MapMatching {
         if (!queryGraphPrepared) {
             prepareQueryGraph(observations, offset);
         }
-        
+
         // Use the unified queryGraph for all operations
         List<List<Snap>> snapsPerObservationTmp = preparedSnapsPerObservation;
         queryGraphPrepared = false; // consumed
@@ -141,7 +141,7 @@ public class RailwayMapMatching extends MapMatching {
 
             // Analyze routed paths to find best path and check for direct path (case 1)
             pathAnalysis = analyzeRoutedPaths(
-                    routedPaths, filteredObservations, snapsPerObservationTmp, 
+                    routedPaths, filteredObservations, snapsPerObservationTmp,
                     analysisResult, forceInitialRouting);
 
             // Case 1: All observations on a single routed path
@@ -165,7 +165,7 @@ public class RailwayMapMatching extends MapMatching {
             // Case 2: Try via-waypoint routing with best path
             else if (pathAnalysis.bestPath != null && !forceInitialRouting) {
                 System.out.println("Case 2: Attempting via-waypoint routing with best path");
-                
+
                 // Check if any observations are not on any path
                 for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
                     List<Boolean> snapNotOnRoutedPath = analysisResult.snapsNotOnRoutedPaths.get(observationsIndex);
@@ -175,20 +175,20 @@ public class RailwayMapMatching extends MapMatching {
                         break;
                     }
                 }
-                
+
                 if (anySnapNotOnAnyRoutedPath) {
                     MatchResult viaWaypointResult = attemptViaWaypointRouting(
                             pathAnalysis.bestPath, pathAnalysis.bestPathIndex,
                             pathAnalysis.bestPathSnaps, filteredObservations,
                             snapsPerObservationTmp, analysisResult.snapsNotOnRoutedPaths,
                             observations, sw);
-                    
+
                     if (viaWaypointResult != null) {
                         return viaWaypointResult;
                     }
                 }
             }
-            
+
             // Handle forced routing
             if (forceInitialRouting && pathAnalysis.bestPath != null) {
                 System.out.println("Forced routing - using best path");
@@ -196,7 +196,7 @@ public class RailwayMapMatching extends MapMatching {
                 snapsPerObservationOnRoutedPath = pathAnalysis.bestPathSnaps;
                 statistics.put("usedDirectRouting", false);
                 statistics.put("forcedDirectRouting", true);
-                
+
                 // Print summary
                 System.out.println("Path snap counts summary:");
                 for (int i = 0; i < analysisResult.snapsOnPathCounts.length; i++) {
@@ -209,29 +209,29 @@ public class RailwayMapMatching extends MapMatching {
                 }
             }
         }
-        
+
         // If we have a direct path (Case 1), bypass Viterbi and create result directly
         if (routedPath != null && pathAnalysis.hasDirectPath) {
             System.out.println("Creating direct MatchResult bypassing Viterbi algorithm");
-            
+
             // Build edge matches directly from the routed path
             List<EdgeIteratorState> pathEdges = routedPath.calcEdges();
             List<EdgeMatch> edgeMatches = buildEdgeMatchesForMergedPath(
-                    pathEdges, observations, filteredObservations,
+                    pathEdges, filteredObservations,
                     pathAnalysis.directPathSnaps, Collections.emptyList());
-            
+
             // Create and return result
             statistics.put("usedDirectRouting", true);
             statistics.put("forcedDirectRouting", false);
             statistics.put("usedViaWaypointRouting", false);
             statistics.put("visitedNodes", router.getVisitedNodes());
             statistics.put("snapsPerObservation", pathAnalysis.directPathSnaps.stream().mapToInt(Collection::size).toArray());
-            
+
             processedUpTo = observations.size() - 1;
-            
+
             Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
             Path directMapMatchedPath = new MapMatchedPath(queryGraph, queryGraphWeighting, pathEdges);
-            
+
             result = new MatchResult(edgeMatches);
             result.setMergedPath(directMapMatchedPath);
             result.setMatchMillis(directMapMatchedPath.getTime());
@@ -239,7 +239,7 @@ public class RailwayMapMatching extends MapMatching {
             result.setGPXEntriesLength(gpxLength(observations));
             result.setGraph(queryGraph);
             result.setWeighting(queryGraphWeighting);
-            
+
             // Print final path as GeoJSON for debugging
             if (!pathEdges.isEmpty()) {
                 StringBuilder geoJson = new StringBuilder();
@@ -260,10 +260,10 @@ public class RailwayMapMatching extends MapMatching {
                         .append("}}");
                 System.out.println("Direct Path (bypassing Viterbi) GeoJSON: " + geoJson);
             }
-            
+
             return result;
         }
-        
+
         // Case 3: Fall back to Viterbi algorithm
         System.out.println("Case 3: Using Viterbi algorithm for map matching");
         if (anySnapNotOnAnyRoutedPath || routedPath == null) {
@@ -378,7 +378,7 @@ public class RailwayMapMatching extends MapMatching {
 
         result = new MatchResult(prepareEdgeMatches(seq));
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
-        
+
         result.setMergedPath(new MapMatchedPath(queryGraph, queryGraphWeighting, path));
         result.setMatchMillis(seq.stream().filter(s -> s.transitionDescriptor != null).mapToLong(s -> s.transitionDescriptor.getTime()).sum());
         result.setMatchLength(seq.stream().filter(s -> s.transitionDescriptor != null).mapToDouble(s -> s.transitionDescriptor.getDistance()).sum());
@@ -394,9 +394,9 @@ public class RailwayMapMatching extends MapMatching {
      * nodes appear in the bestPath's node sequence, then splices at those positions.
      * All edges are from the unified {@link #queryGraph}.
      *
-     * @param bestPathEdges          Edges from the best initial route
-     * @param perSegmentRoutedEdges  Edges for each routed detour segment
-     * @param segmentBoundaryNodes   [startNode, endNode] for each segment (actual nodes used in routing)
+     * @param bestPathEdges         Edges from the best initial route
+     * @param perSegmentRoutedEdges Edges for each routed detour segment
+     * @param segmentBoundaryNodes  [startNode, endNode] for each segment (actual nodes used in routing)
      */
     private List<EdgeIteratorState> buildMergedEdgeList(
             List<EdgeIteratorState> bestPathEdges,
@@ -519,7 +519,6 @@ public class RailwayMapMatching extends MapMatching {
      */
     private List<EdgeMatch> buildEdgeMatchesForMergedPath(
             List<EdgeIteratorState> mergedPathEdges,
-            List<Observation> observations,
             List<Observation> filteredObservations,
             List<List<Snap>> bestPathSnaps,
             List<List<Snap>> routedPathSnaps) {
@@ -533,12 +532,8 @@ public class RailwayMapMatching extends MapMatching {
         // Map: real edge ID -> list of (observation, snap) pairs
         Map<Integer, List<Object[]>> edgeToObsSnap = new LinkedHashMap<>();
 
-        for (Observation obs : observations) {
-            int obsIdx = obs.getPoint().index;
-
-            // Find the filtered observation index
-            int filteredObsIdx = findFilteredObsIndex(filteredObservations, obsIdx);
-            if (filteredObsIdx < 0) continue;
+        for (int filteredObsIdx = 0; filteredObsIdx < filteredObservations.size(); filteredObsIdx++) {
+            Observation filteredObs = filteredObservations.get(filteredObsIdx);
 
             // Collect candidate snaps from both bestPath and routed segments
             List<Snap> allCandidateSnaps = new ArrayList<>();
@@ -554,7 +549,7 @@ public class RailwayMapMatching extends MapMatching {
                 int realEdgeId = resolveToRealEdge(snap.getClosestEdge()).getEdge();
                 if (mergedRealEdgeIds.contains(realEdgeId)) {
                     edgeToObsSnap.computeIfAbsent(realEdgeId, k -> new ArrayList<>())
-                            .add(new Object[]{obs, snap});
+                            .add(new Object[]{filteredObs, snap});
                     break;
                 }
             }
@@ -588,19 +583,6 @@ public class RailwayMapMatching extends MapMatching {
         }
 
         return edgeMatches;
-    }
-
-    /**
-     * Find the index into filteredObservations that matches the given original observation index.
-     * Returns -1 if not found.
-     */
-    private static int findFilteredObsIndex(List<Observation> filteredObservations, int originalObsIdx) {
-        for (int j = 0; j < filteredObservations.size(); j++) {
-            if (filteredObservations.get(j).getPoint().index == originalObsIdx) {
-                return j;
-            }
-        }
-        return -1;
     }
 
     /**
@@ -686,7 +668,7 @@ public class RailwayMapMatching extends MapMatching {
         final List<List<Snap>> directPathSnaps;
 
         PathAnalysisResult(Path bestPath, int bestPathIndex, List<List<Snap>> bestPathSnaps,
-                          boolean hasDirectPath, Path directPath, List<List<Snap>> directPathSnaps) {
+                           boolean hasDirectPath, Path directPath, List<List<Snap>> directPathSnaps) {
             this.bestPath = bestPath;
             this.bestPathIndex = bestPathIndex;
             this.bestPathSnaps = bestPathSnaps;
@@ -713,7 +695,7 @@ public class RailwayMapMatching extends MapMatching {
         int bestPathIndex = -1;
         Path bestPath = null;
         List<List<Snap>> bestPathSnaps = new ArrayList<>();
-        
+
         Path directPath = null;
         List<List<Snap>> directPathSnaps = new ArrayList<>();
         boolean hasDirectPath = false;
@@ -723,11 +705,11 @@ public class RailwayMapMatching extends MapMatching {
         for (int routedPathsIndex = 0; routedPathsIndex < routedPaths.size(); routedPathsIndex++) {
             Path tmpRoutedPath = routedPaths.get(routedPathsIndex);
             Set<Integer> pathEdgeIndices = routedPathsPathEdgeIndices.get(routedPathsIndex);
-            
+
             if (!tmpRoutedPath.isFound()) {
                 continue;
             }
-            
+
             int snapsOnPathCount = snapsOnPathCounts[routedPathsIndex];
 
             System.out.println("Path #" + (routedPathsIndex + 1) + ": " + snapsOnPathCount + " snaps out of " +
@@ -764,7 +746,7 @@ public class RailwayMapMatching extends MapMatching {
             }
 
             // Check if all snaps are on this path (case 1)
-            if (allSnapsOnRoutedPath && !forceInitialRouting ) {
+            if (allSnapsOnRoutedPath && !forceInitialRouting) {
                 directPath = tmpRoutedPath;
                 directPathSnaps = new ArrayList<>(snapsPerObservationOnRoutedPathTmpList.get(routedPathsIndex));
                 hasDirectPath = true;
@@ -822,7 +804,7 @@ public class RailwayMapMatching extends MapMatching {
                 observationsNotOnBestPathIndices.add(observationsIndex);
             }
         }
-        
+
         // Also find observations not on any path for comparison
         List<Integer> observationsNotOnAnyPathIndices = new ArrayList<>();
         for (int observationsIndex = 0; observationsIndex < filteredObservations.size(); observationsIndex++) {
@@ -832,33 +814,33 @@ public class RailwayMapMatching extends MapMatching {
                 observationsNotOnAnyPathIndices.add(observationsIndex);
             }
         }
-        
+
         if (observationsNotOnBestPathIndices.isEmpty()) {
             System.out.println("Via-waypoint routing: no off-path observations found");
             return null;
         }
-        
+
         System.out.println("Attempting via-waypoint routing through " + observationsNotOnBestPathIndices.size() +
                 " off-path observations (relative to best path #" + (bestPathIndex) + ")" +
                 " (was " + observationsNotOnAnyPathIndices.size() + " off all paths)");
-        
+
         // Build waypoint segments and attempt routing
         ViaWaypointRoutingResult routingResult = performViaWaypointRouting(
-                observationsNotOnBestPathIndices, filteredObservations, 
+                observationsNotOnBestPathIndices, filteredObservations,
                 bestPath, bestPathSnaps, snapsPerObservationTmp, sw);
-        
+
         if (!routingResult.success) {
             System.out.println("Via-waypoint routing: failed, falling back to Viterbi");
             statistics.put("usedViaWaypointRouting", false);
             return null;
         }
-        
+
         List<EdgeIteratorState> bestPathEdges = bestPath.calcEdges();
-        
+
         List<EdgeIteratorState> mergedPath = buildMergedEdgeList(
-                bestPathEdges, routingResult.perSegmentRoutedEdges, 
+                bestPathEdges, routingResult.perSegmentRoutedEdges,
                 routingResult.segmentBoundaryNodes);
-        
+
         System.out.println("Via-waypoint routing: successfully routed detour segments. Total merged edges=" + mergedPath.size());
 
         // Fail-early: ensure merged path distance respects the max allowed distance
@@ -877,29 +859,29 @@ public class RailwayMapMatching extends MapMatching {
         // Debug: Check merged path edges before creating MapMatchedPath
         for (int i = 0; i < Math.min(5, mergedPath.size()); i++) {
             EdgeIteratorState edge = mergedPath.get(i);
-            System.out.println("  Merged edge " + i + ": edgeId=" + edge.getEdge() + 
+            System.out.println("  Merged edge " + i + ": edgeId=" + edge.getEdge() +
                     ", baseNode=" + edge.getBaseNode() + ", adjNode=" + edge.getAdjNode());
         }
-        
+
         // Build edge matches
         List<EdgeMatch> edgeMatches = buildEdgeMatchesForMergedPath(
-                mergedPath, observations, filteredObservations,
+                mergedPath, filteredObservations,
                 bestPathSnaps, routingResult.routedPathSnaps);
-        
+
         // Create and return result
         statistics.put("usedDirectRouting", false);
         statistics.put("forcedDirectRouting", false);
         statistics.put("usedViaWaypointRouting", true);
         statistics.put("visitedNodes", router.getVisitedNodes());
-        
+
         processedUpTo = observations.size() - 1;
-        
+
         printMergedPathGeoJson(mergedPath, observations.size(),
                 edgeMatches.stream().mapToInt(em -> em.getStates().size()).sum());
-        
+
         Weighting queryGraphWeighting = queryGraph.wrapWeighting(router.getWeighting());
         Path mergedMapMatchedPath = new MapMatchedPath(queryGraph, queryGraphWeighting, mergedPath);
-        
+
         MatchResult result = new MatchResult(edgeMatches);
         result.setMergedPath(mergedMapMatchedPath);
         result.setMatchMillis(mergedMapMatchedPath.getTime());
@@ -907,10 +889,10 @@ public class RailwayMapMatching extends MapMatching {
         result.setGPXEntriesLength(gpxLength(observations));
         result.setGraph(queryGraph);
         result.setWeighting(queryGraphWeighting);
-        
+
         return result;
     }
-    
+
     /**
      * Result of a single-leg routing attempt between two observations.
      */
@@ -918,6 +900,7 @@ public class RailwayMapMatching extends MapMatching {
         final Path path;
         final Snap fromSnap;
         final Snap toSnap;
+
         LegResult(Path path, Snap fromSnap, Snap toSnap) {
             this.path = path;
             this.fromSnap = fromSnap;
@@ -932,8 +915,8 @@ public class RailwayMapMatching extends MapMatching {
     private static class SegmentResult {
         final List<EdgeIteratorState> edges = new ArrayList<>();
         int startNode = -1;
-        int endNode   = -1;
-        boolean spliceable    = true;
+        int endNode = -1;
+        boolean spliceable = true;
         boolean allLegsRouted = true;
         Snap lastToSnap = null;  // to-snap of the last committed leg (used by salvage)
     }
@@ -946,16 +929,16 @@ public class RailwayMapMatching extends MapMatching {
         final List<List<EdgeIteratorState>> perSegmentRoutedEdges;
         final List<int[]> segmentBoundaryNodes;
         final List<List<Snap>> routedPathSnaps;
-        
+
         ViaWaypointRoutingResult(boolean success, List<List<EdgeIteratorState>> perSegmentRoutedEdges,
-                                List<int[]> segmentBoundaryNodes, List<List<Snap>> routedPathSnaps) {
+                                 List<int[]> segmentBoundaryNodes, List<List<Snap>> routedPathSnaps) {
             this.success = success;
             this.perSegmentRoutedEdges = perSegmentRoutedEdges;
             this.segmentBoundaryNodes = segmentBoundaryNodes;
             this.routedPathSnaps = routedPathSnaps;
         }
     }
-    
+
     /**
      * Routes each contiguous off-path segment via chained waypoint legs and splices the results
      * back onto the best path.
@@ -976,7 +959,7 @@ public class RailwayMapMatching extends MapMatching {
             StopWatch sw) {
 
         Set<Integer> offPathSet = new LinkedHashSet<>(observationsNotOnBestPathIndices);
-        List<List<Integer>> offPathSegments       = computeOffPathSegments(observationsNotOnBestPathIndices);
+        List<List<Integer>> offPathSegments = computeOffPathSegments(observationsNotOnBestPathIndices);
         List<List<Integer>> segmentWaypointIndices = buildWaypointsList(filteredObservations, offPathSegments, offPathSet);
 
         if (!validateAndLogWaypointSnaps(segmentWaypointIndices, snapsPerObservationTmp, filteredObservations, offPathSet))
@@ -985,8 +968,8 @@ public class RailwayMapMatching extends MapMatching {
         Set<Integer> bestPathNodeSet = buildBestPathNodeSet(bestPath);
 
         List<List<EdgeIteratorState>> perSegmentRoutedEdges = new ArrayList<>();
-        List<int[]>       segmentBoundaryNodes = new ArrayList<>();
-        List<List<Snap>>  routedPathSnaps      = new ArrayList<>();
+        List<int[]> segmentBoundaryNodes = new ArrayList<>();
+        List<List<Snap>> routedPathSnaps = new ArrayList<>();
         for (int i = 0; i < filteredObservations.size(); i++) routedPathSnaps.add(new ArrayList<>());
 
         boolean allSegmentsRouted = true;
@@ -997,7 +980,10 @@ public class RailwayMapMatching extends MapMatching {
             SegmentResult result = routeSegmentLegs(waypoints, snapsPerObservationTmp,
                     filteredObservations, offPathSet, routedPathSnaps, segNum, sw);
 
-            if (!result.spliceable) { result.startNode = -1; result.endNode = -1; }
+            if (!result.spliceable) {
+                result.startNode = -1;
+                result.endNode = -1;
+            }
 
             salvagePartialSegment(result, bestPathNodeSet);
 
@@ -1009,7 +995,10 @@ public class RailwayMapMatching extends MapMatching {
             segmentBoundaryNodes.add(new int[]{result.startNode, result.endNode});
             logSegmentGeoJson(result.edges, segNum, waypoints.size(), result.spliceable, result.startNode, result.endNode);
 
-            if (!result.allLegsRouted) { allSegmentsRouted = false; break; }
+            if (!result.allLegsRouted) {
+                allSegmentsRouted = false;
+                break;
+            }
         }
 
         if (!allSegmentsRouted || perSegmentRoutedEdges.isEmpty())
@@ -1079,7 +1068,7 @@ public class RailwayMapMatching extends MapMatching {
      * @return the best {@link LegResult} within threshold, or {@code null} if none found
      */
     private LegResult findBestLeg(List<Snap> fromCandidates, List<Snap> toCandidates,
-                                   int chainNode, double threshold) {
+                                  int chainNode, double threshold) {
         LegResult best = null;
         outer:
         for (Snap fromSnap : fromCandidates) {
@@ -1124,22 +1113,28 @@ public class RailwayMapMatching extends MapMatching {
 
             // Find the closest on-path anchor before and after (filtered positions)
             Integer anchorBefore = null;
-            Integer anchorAfter  = null;
+            Integer anchorAfter = null;
             for (int i = seg.get(0) - 1; i >= 0; i--)
-                if (!offPathSet.contains(i)) { anchorBefore = i; break; }
+                if (!offPathSet.contains(i)) {
+                    anchorBefore = i;
+                    break;
+                }
             for (int i = seg.get(seg.size() - 1) + 1; i < filteredObservations.size(); i++)
-                if (!offPathSet.contains(i)) { anchorAfter = i; break; }
+                if (!offPathSet.contains(i)) {
+                    anchorAfter = i;
+                    break;
+                }
 
             System.out.println("  Segment " + segNum + ": off-path obs "
                     + filteredObservations.get(seg.get(0)).getPoint().index
                     + "-" + filteredObservations.get(seg.get(seg.size() - 1)).getPoint().index
                     + " (anchor before: obs " + (anchorBefore != null ? filteredObservations.get(anchorBefore).getPoint().index : "NONE")
-                    + ", anchor after: obs "  + (anchorAfter  != null ? filteredObservations.get(anchorAfter).getPoint().index  : "NONE") + ")");
+                    + ", anchor after: obs " + (anchorAfter != null ? filteredObservations.get(anchorAfter).getPoint().index : "NONE") + ")");
 
             List<Integer> waypoints = new ArrayList<>();
             if (anchorBefore != null) waypoints.add(anchorBefore);
             waypoints.addAll(seg);
-            if (anchorAfter  != null) waypoints.add(anchorAfter);
+            if (anchorAfter != null) waypoints.add(anchorAfter);
 
             segmentWaypointIndices.add(waypoints);
         }
@@ -1236,27 +1231,27 @@ public class RailwayMapMatching extends MapMatching {
 
         SegmentResult result = new SegmentResult();
         Snap previousLegToSnap = null;
-        Snap prevChainSnap         = null;
-        Snap prevPrevChainSnap     = null;
-        int  lastIterEdgeCount     = 0;
-        int  prevPrevIterEdgeCount = 0;
-        double lastLegRouteDist    = 0;
-        int  anchorBackSteps       = 0;
-        int  wpIdx                 = 0;
+        Snap prevChainSnap = null;
+        Snap prevPrevChainSnap = null;
+        int lastIterEdgeCount = 0;
+        int prevPrevIterEdgeCount = 0;
+        double lastLegRouteDist = 0;
+        int anchorBackSteps = 0;
+        int wpIdx = 0;
 
         while (wpIdx < waypoints.size() - 1) {
             checkTimeLimit(sw);
 
             int edgesAtIterStart = result.edges.size();
-            int fromFilteredPos  = waypoints.get(wpIdx);
-            int toFilteredPos    = waypoints.get(wpIdx + 1);
+            int fromFilteredPos = waypoints.get(wpIdx);
+            int toFilteredPos = waypoints.get(wpIdx + 1);
 
             List<Snap> allFromCandidates = limit(snapsPerObservationTmp.get(fromFilteredPos), MAX_SNAP_CANDIDATES);
-            List<Snap> toCandidates      = limit(snapsPerObservationTmp.get(toFilteredPos),   MAX_SNAP_CANDIDATES);
-            List<Snap> fromCandidates    = buildChainedFromCandidates(allFromCandidates, previousLegToSnap);
-            double threshold             = routingThreshold(fromCandidates.get(0).getQueryPoint(),
-                                                            toCandidates.get(0).getQueryPoint());
-            int chainNode                = (previousLegToSnap != null) ? previousLegToSnap.getClosestNode() : -1;
+            List<Snap> toCandidates = limit(snapsPerObservationTmp.get(toFilteredPos), MAX_SNAP_CANDIDATES);
+            List<Snap> fromCandidates = buildChainedFromCandidates(allFromCandidates, previousLegToSnap);
+            double threshold = routingThreshold(fromCandidates.get(0).getQueryPoint(),
+                    toCandidates.get(0).getQueryPoint());
+            int chainNode = (previousLegToSnap != null) ? previousLegToSnap.getClosestNode() : -1;
 
             // --- Primary routing: best (from, to) snap pair within threshold.
             // Non-chained from-snaps are bridge-pre-filtered to prevent infeasible intra-bridges. ---
@@ -1265,7 +1260,7 @@ public class RailwayMapMatching extends MapMatching {
             // --- Fallback 1: Waypoint-skip ---
             // Route the chain directly to waypoints[wpIdx+2], bypassing the unreachable waypoints[wpIdx+1].
             if (leg == null && previousLegToSnap != null && wpIdx < waypoints.size() - 2) {
-                int skipToFilteredPos     = waypoints.get(wpIdx + 2);
+                int skipToFilteredPos = waypoints.get(wpIdx + 2);
                 List<Snap> skipCandidates = limit(snapsPerObservationTmp.get(skipToFilteredPos), MAX_SNAP_CANDIDATES);
                 if (!skipCandidates.isEmpty()) {
                     double skipThreshold = routingThreshold(
@@ -1277,7 +1272,7 @@ public class RailwayMapMatching extends MapMatching {
                                     + filteredObservations.get(toFilteredPos).getPoint().index
                                     + " -> routing chain to obs "
                                     + filteredObservations.get(skipToFilteredPos).getPoint().index);
-                            leg           = new LegResult(p, previousLegToSnap, toSnap);
+                            leg = new LegResult(p, previousLegToSnap, toSnap);
                             wpIdx++;
                             toFilteredPos = skipToFilteredPos;
                             break;
@@ -1316,15 +1311,16 @@ public class RailwayMapMatching extends MapMatching {
                         int prevLegNode = prevLegTrial.getClosestNode();
                         Path prevLegPath = tryRoute(prevLegNode, altFromNode);
                         if (prevLegPath == null || prevLegPath.getDistance() >
-                                routingThreshold(prevLegTrial.getQueryPoint(), altLeg.fromSnap.getQueryPoint())) continue;
+                                routingThreshold(prevLegTrial.getQueryPoint(), altLeg.fromSnap.getQueryPoint()))
+                            continue;
                         if (prevLegNode == prevChainSnap.getClosestNode()) {
                             // L1: replace last leg only
                             trimTail(result.edges, lastIterEdgeCount);
                             result.edges.addAll(prevLegPath.calcEdges());
-                            edgesAtIterStart  = result.edges.size();
+                            edgesAtIterStart = result.edges.size();
                             previousLegToSnap = altLeg.fromSnap;
-                            chainNode         = altLeg.fromSnap.getClosestNode();
-                            leg               = altLeg;
+                            chainNode = altLeg.fromSnap.getClosestNode();
+                            leg = altLeg;
                             System.out.println("  [Seg " + segNum + " leg " + wpIdx
                                     + "] prev-leg snap fix L1: " + prevLegNode + "->" + altFromNode
                                     + " (" + String.format("%.0f", prevLegPath.getDistance()) + "m)");
@@ -1333,14 +1329,15 @@ public class RailwayMapMatching extends MapMatching {
                             // L2: replace last two legs
                             Path ppPath = tryRoute(prevPrevChainSnap.getClosestNode(), prevLegNode);
                             if (ppPath == null || ppPath.getDistance() >
-                                    routingThreshold(prevPrevChainSnap.getQueryPoint(), prevLegTrial.getQueryPoint())) continue;
+                                    routingThreshold(prevPrevChainSnap.getQueryPoint(), prevLegTrial.getQueryPoint()))
+                                continue;
                             trimTail(result.edges, lastIterEdgeCount + prevPrevIterEdgeCount);
                             result.edges.addAll(ppPath.calcEdges());
                             result.edges.addAll(prevLegPath.calcEdges());
-                            edgesAtIterStart  = result.edges.size();
+                            edgesAtIterStart = result.edges.size();
                             previousLegToSnap = altLeg.fromSnap;
-                            chainNode         = altLeg.fromSnap.getClosestNode();
-                            leg               = altLeg;
+                            chainNode = altLeg.fromSnap.getClosestNode();
+                            leg = altLeg;
                             System.out.println("  [Seg " + segNum + " leg " + wpIdx
                                     + "] prev-leg snap fix L2: " + prevPrevChainSnap.getClosestNode()
                                     + "->" + prevLegNode + "->" + altFromNode
@@ -1362,12 +1359,12 @@ public class RailwayMapMatching extends MapMatching {
                         + lastIterEdgeCount + " edges (last leg dist=" + String.format("%.0f", lastLegRouteDist)
                         + "m), retrying from node " + prevChainSnap.getClosestNode());
                 trimTail(result.edges, lastIterEdgeCount);
-                previousLegToSnap     = prevChainSnap;
-                prevChainSnap         = null;
-                prevPrevChainSnap     = null;
-                lastIterEdgeCount     = 0;
+                previousLegToSnap = prevChainSnap;
+                prevChainSnap = null;
+                prevPrevChainSnap = null;
+                lastIterEdgeCount = 0;
                 prevPrevIterEdgeCount = 0;
-                lastLegRouteDist      = 0;
+                lastLegRouteDist = 0;
                 continue;
             }
 
@@ -1410,8 +1407,8 @@ public class RailwayMapMatching extends MapMatching {
                     + (usedChainedSnap ? "(chained)" : "(alt)") + " to=" + leg.toSnap.getClosestNode()
                     + " dist=" + String.format("%.0f", leg.path.getDistance()) + "m");
 
-            if (wpIdx == 0)                    result.startNode = leg.fromSnap.getClosestNode();
-            if (wpIdx == waypoints.size() - 2) result.endNode   = leg.toSnap.getClosestNode();
+            if (wpIdx == 0) result.startNode = leg.fromSnap.getClosestNode();
+            if (wpIdx == waypoints.size() - 2) result.endNode = leg.toSnap.getClosestNode();
 
             routedPathSnaps.get(fromFilteredPos).add(leg.fromSnap);
             routedPathSnaps.get(toFilteredPos).add(leg.toSnap);
@@ -1435,13 +1432,13 @@ public class RailwayMapMatching extends MapMatching {
             }
 
             result.edges.addAll(leg.path.calcEdges());
-            prevPrevChainSnap     = prevChainSnap;
+            prevPrevChainSnap = prevChainSnap;
             prevPrevIterEdgeCount = lastIterEdgeCount;
-            prevChainSnap         = previousLegToSnap;
-            previousLegToSnap     = leg.toSnap;
-            lastIterEdgeCount     = result.edges.size() - edgesAtIterStart;
-            lastLegRouteDist      = leg.path.getDistance();
-            result.lastToSnap     = leg.toSnap;
+            prevChainSnap = previousLegToSnap;
+            previousLegToSnap = leg.toSnap;
+            lastIterEdgeCount = result.edges.size() - edgesAtIterStart;
+            lastLegRouteDist = leg.path.getDistance();
+            result.lastToSnap = leg.toSnap;
             wpIdx++;
         }
 
@@ -1464,14 +1461,14 @@ public class RailwayMapMatching extends MapMatching {
         }
 
         // Scan for the last edge arrival that lands on the best path
-        int prevNode   = result.edges.get(0).getBaseNode();
-        int foundNode  = -1;
+        int prevNode = result.edges.get(0).getBaseNode();
+        int foundNode = -1;
         int trimToEdge = -1;
         for (int e = 0; e < result.edges.size(); e++) {
             EdgeIteratorState edge = result.edges.get(e);
             int arrival = (edge.getBaseNode() == prevNode) ? edge.getAdjNode() : edge.getBaseNode();
             if (bestPathNodeSet.contains(arrival)) {
-                foundNode  = arrival;
+                foundNode = arrival;
                 trimToEdge = e;
             }
             prevNode = arrival;
